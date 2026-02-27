@@ -1,274 +1,41 @@
 <!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ColorDrop — Download Warna Realistis</title>
+<html>
+  <head>
+    <title>Chat Cepat</title>
+    <style>
+      body { font-family: sans-serif; margin: 20px; }
+      #messages { list-style-type: none; padding: 0; border: 1px solid #ccc; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
+      #messages li { padding: 8px; border-bottom: 1px solid #eee; }
+      input { width: 80%; padding: 10px; }
+      button { padding: 10px 20px; }
+    </style>
+  </head>
+  <body>
+    <ul id="messages"></ul>
+    <form id="form" action="">
+      <input id="input" autocomplete="off" placeholder="Ketik pesan..." /><button>Kirim</button>
+    </form>
 
-<style>
-:root{
-  --bg:#fff6fb;
-  --card:#ffffff;
-  --text:#333;
-}
-*{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont;}
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-}
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io();
+      var form = document.getElementById('form');
+      var input = document.getElementById('input');
 
-/* HEADER */
-header{
-  padding:16px;
-  font-size:22px;
-  font-weight:800;
-  text-align:center;
-}
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (input.value) {
+          socket.emit('chat message', input.value);
+          input.value = '';
+        }
+      });
 
-/* GRID */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
-  gap:14px;
-  padding:16px;
-}
-.card{
-  background:var(--card);
-  border-radius:18px;
-  padding:14px;
-  box-shadow:0 6px 20px rgba(0,0,0,.08);
-  cursor:pointer;
-  transition:.2s;
-}
-.card:hover{transform:translateY(-4px);}
-.preview{height:90px;border-radius:14px;}
-.name{font-weight:600;margin-top:8px;}
-.mb{font-size:12px;opacity:.7}
-
-/* PAGE */
-.page{display:none;min-height:100vh;padding:20px;}
-.page.active{display:block;}
-.close{
-  position:fixed;top:14px;right:16px;
-  font-size:22px;cursor:pointer;
-}
-
-/* DETAIL */
-.detail-box{max-width:600px;margin:auto;}
-.hero{height:180px;border-radius:22px;margin-bottom:16px;}
-.info p{margin:8px 0;}
-.download-btn{
-  margin-top:30px;
-  padding:16px;
-  background:#000;
-  color:#fff;
-  border-radius:16px;
-  text-align:center;
-  cursor:pointer;
-  font-weight:600;
-}
-
-/* DOWNLOAD */
-.download-page{text-align:center;color:#fff;}
-.progress-wrap{
-  max-width:420px;
-  margin:40px auto 12px;
-  background:rgba(255,255,255,.3);
-  border-radius:20px;
-  overflow:hidden;
-}
-.bar{
-  height:16px;
-  width:0%;
-  background:#fff;
-  transition:width .15s linear;
-}
-.percent{font-weight:700;margin-top:6px}
-.msg{margin-top:12px;font-size:14px;opacity:.95}
-
-/* STRIPES FINAL */
-.loading-stripes{
-  background:repeating-linear-gradient(
-    90deg,
-    rgba(255,255,255,.95),
-    rgba(255,255,255,.95) 10px,
-    rgba(255,255,255,.4) 10px,
-    rgba(255,255,255,.4) 20px
-  );
-  animation:move 1s linear infinite;
-}
-@keyframes move{
-  from{background-position:0 0;}
-  to{background-position:40px 0;}
-}
-
-/* ALERT TOP */
-.alert{
-  position:fixed;
-  top:0;left:0;right:0;
-  background:#000;
-  color:#fff;
-  padding:10px;
-  font-size:13px;
-  display:none;
-  cursor:pointer;
-  z-index:99;
-}
-.alert .mini{
-  height:4px;
-  background:#444;
-  margin-top:6px;
-}
-.alert .mini div{
-  height:100%;
-  width:0%;
-  background:#fff;
-}
-
-/* MOBILE */
-@media(max-width:600px){
-  header{font-size:18px}
-}
-</style>
-</head>
-
-<body>
-
-<!-- ALERT BAR -->
-<div class="alert" id="alertBar" onclick="openDownload()">
-  <div id="alertText"></div>
-  <div class="mini"><div id="alertProg"></div></div>
-</div>
-
-<header>🎨 ColorDrop</header>
-
-<!-- HOME -->
-<div id="home" class="page active">
-  <div class="grid" id="grid"></div>
-</div>
-
-<!-- DETAIL -->
-<div id="detail" class="page">
-  <div class="close" onclick="goHome()">✕</div>
-  <div class="detail-box">
-    <div id="hero" class="hero"></div>
-    <h2 id="dName"></h2>
-    <div class="info">
-      <p><b>Jenis:</b> <span id="dType"></span></p>
-      <p><b>Golongan:</b> <span id="dGroup"></span></p>
-      <p><b>Asal-usul:</b> <span id="dOrigin"></span></p>
-    </div>
-    <div class="download-btn" onclick="startDownload()">Download Warna</div>
-  </div>
-</div>
-
-<!-- DOWNLOAD -->
-<div id="download" class="page download-page">
-  <div class="close" onclick="backDetail()">✕</div>
-  <h2 id="downTitle"></h2>
-  <div class="progress-wrap">
-    <div class="bar" id="bar"></div>
-  </div>
-  <div class="percent" id="percent">0%</div>
-  <div class="msg" id="msg"></div>
-  <div class="msg" id="code"></div>
-</div>
-
-<script>
-const colors=[
- {name:"Candy Pink",hex:"#FF9ACD",mb:2,type:"Primer",group:"Pastel",origin:"Terinspirasi permen manis"},
- {name:"Sky Mint",hex:"#9FF3C4",mb:5,type:"Sekunder",group:"Cool",origin:"Langit pagi & daun mint"},
- {name:"Lavender Pop",hex:"#C7B7FF",mb:8,type:"Tersier",group:"Pastel",origin:"Bunga lavender"},
- {name:"Sunny Peach",hex:"#FFB38A",mb:12,type:"Sekunder",group:"Warm",origin:"Buah peach matang"},
- {name:"Ocean Blue",hex:"#4DA6FF",mb:20,type:"Primer",group:"Cool",origin:"Laut dalam"},
- {name:"Matcha Cream",hex:"#A8D5A2",mb:25,type:"Tersier",group:"Soft",origin:"Teh matcha Jepang"},
- {name:"Grape Soda",hex:"#8B5CF6",mb:18,type:"Tersier",group:"Vibrant",origin:"Minuman soda anggur"},
- {name:"Soft Lemon",hex:"#FFF1A8",mb:10,type:"Primer",group:"Warm",origin:"Kulit lemon segar"}
-];
-
-let current=null,prog=0,timer=null,activePage="home";
-
-const grid=document.getElementById("grid");
-colors.forEach((c,i)=>{
-  const el=document.createElement("div");
-  el.className="card";
-  el.innerHTML=`
-    <div class="preview" style="background:${c.hex}"></div>
-    <div class="name">${c.name}</div>
-    <div class="mb">${c.mb} MB</div>`;
-  el.onclick=()=>openDetail(i);
-  grid.appendChild(el);
-});
-
-function show(page){
-  activePage=page;
-  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-  document.getElementById(page).classList.add("active");
-}
-
-function openDetail(i){
-  current=colors[i];
-  hero.style.background=current.hex;
-  dName.textContent=current.name;
-  dType.textContent=current.type;
-  dGroup.textContent=current.group;
-  dOrigin.textContent=current.origin;
-  show("detail");
-}
-function goHome(){show("home");}
-function backDetail(){show("detail");}
-function openDownload(){show("download");}
-
-function startDownload(){
-  prog=0;
-  bar.style.width="0%";
-  percent.textContent="0%";
-  msg.textContent="Pesan: download warna apa tuh";
-  code.textContent="";
-  download.style.background=current.hex;
-  downTitle.textContent="Downloading "+current.name;
-  alertBar.style.display="block";
-  show("download");
-
-  clearInterval(timer);
-
-  timer=setInterval(()=>{
-    let speed= current.mb < 5 ? 2 : current.mb < 15 ? 1 : 0.5;
-    prog += Math.random()*speed*2;
-
-    if(prog>=100){
-      prog=100;
-      clearInterval(timer);
-      finishDownload();
-    }
-
-    updateUI();
-  },80);
-}
-
-function updateUI(){
-  bar.style.width=prog+"%";
-  percent.textContent=Math.floor(prog)+"%";
-  alertProg.style.width=prog+"%";
-  alertText.textContent=`Downloading ${current.name} • ${Math.floor(prog)}%`;
-
-  if(prog>15 && prog<30) msg.textContent="Pesan: nyiapin pigmen...";
-  if(prog>30 && prog<55) msg.textContent="Pesan: ekstraksi warna...";
-  if(prog>55 && prog<80) msg.textContent="Pesan: kompresi data warna...";
-  if(prog>80 && prog<99) msg.textContent="Pesan: finalisasi...";
-}
-
-function finishDownload(){
-  bar.classList.add("loading-stripes");
-  msg.textContent="Pesan: verifikasi file...";
-  setTimeout(()=>{
-    bar.classList.remove("loading-stripes");
-    msg.textContent="Pesan: download selesai ✔";
-    code.textContent="Kode warna: "+current.hex;
-  },2000);
-}
-</script>
-
-</body>
+      socket.on('chat message', function(msg) {
+        var item = document.createElement('li');
+        item.textContent = msg;
+        document.getElementById('messages').appendChild(item);
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+    </script>
+  </body>
 </html>
