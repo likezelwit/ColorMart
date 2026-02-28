@@ -3,22 +3,27 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
-});
+app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
+
+let onlineUsers = [];
 
 io.on('connection', (socket) => {
-  console.log('User terhubung');
-  
-  socket.on('chat message', (msg) => {
-    io.emit('chat message', msg); // Kirim ke semua user
-  });
+    onlineUsers.push(socket.id);
+    io.emit('update-users', onlineUsers); // Beritahu semua orang siapa saja yang online
+    socket.emit('my-id', socket.id);
 
-  socket.on('disconnect', () => {
-    console.log('User keluar');
-  });
+    socket.on('private-message', (data) => {
+        io.to(data.targetId).emit('chat message', {
+            from: socket.id,
+            message: data.msg
+        });
+    });
+
+    socket.on('disconnect', () => {
+        onlineUsers = onlineUsers.filter(id => id !== socket.id);
+        io.emit('update-users', onlineUsers);
+    });
 });
 
-http.listen(3000, () => {
-  console.log('Server jalan di http://localhost:3000');
-});
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, () => { console.log('Server Ready!'); });
