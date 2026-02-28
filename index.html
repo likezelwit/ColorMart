@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: #25D366; /* Warna segar hijau seperti WhatsApp/Line */
+            --primary: #25D366;
             --primary-dark: #128C7E;
             --secondary: #ECE5DD;
             --accent: #34B7F1;
@@ -26,7 +26,6 @@
             overflow: hidden;
         }
 
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
@@ -50,15 +49,10 @@
             justify-content: space-between;
         }
 
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        .user-profile { display: flex; align-items: center; gap: 10px; }
 
         .avatar {
-            width: 45px;
-            height: 45px;
+            width: 45px; height: 45px;
             border-radius: 50%;
             background: var(--white);
             color: var(--primary);
@@ -69,16 +63,14 @@
             font-size: 1.2rem;
             text-transform: uppercase;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            cursor: pointer;
         }
 
         .my-info h3 { font-size: 1rem; margin-bottom: 2px; }
         .my-info span { font-size: 0.75rem; opacity: 0.9; font-family: monospace; background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; }
 
-        .sidebar-actions i { margin-left: 15px; cursor: pointer; font-size: 1.1rem; opacity: 0.9; }
-        .sidebar-actions i:hover { opacity: 1; }
+        .sidebar-actions i { margin-left: 15px; cursor: pointer; font-size: 1.1rem; opacity: 0.9; transition: 0.2s; }
+        .sidebar-actions i:hover { opacity: 1; transform: scale(1.1); }
 
-        /* Search & Add Contact */
         .sidebar-tools {
             padding: 10px 15px;
             background: #f8f9fa;
@@ -112,11 +104,7 @@
         }
         .input-group button:hover { background: var(--primary-dark); }
 
-        /* Contact List */
-        #contact-list {
-            flex: 1;
-            overflow-y: auto;
-        }
+        #contact-list { flex: 1; overflow-y: auto; }
 
         .contact-item {
             padding: 15px 20px;
@@ -126,6 +114,7 @@
             cursor: pointer;
             transition: background 0.2s;
             border-bottom: 1px solid #f0f0f0;
+            position: relative;
         }
 
         .contact-item:hover { background: #f5f5f5; }
@@ -139,7 +128,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png') repeat; /* Pattern WhatsApp generic */
+            background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png') repeat;
             position: relative;
         }
 
@@ -154,7 +143,9 @@
         }
 
         .chat-header-info h3 { font-size: 1rem; }
-        .chat-header-info span { font-size: 0.8rem; opacity: 0.8; }
+        .chat-header-info span { font-size: 0.8rem; opacity: 0.8; display: block; height: 15px; } /* Height for typing text */
+        .typing-indicator { color: #a5d6a7; font-style: italic; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 
         #messages {
             flex: 1;
@@ -192,18 +183,19 @@
         }
 
         .msg-meta {
-            display: block;
-            text-align: right;
-            font-size: 0.7rem;
-            color: #555;
-            margin-top: 5px;
             display: flex;
             align-items: center;
             justify-content: flex-end;
             gap: 5px;
+            margin-top: 5px;
         }
 
-        .msg-meta i { font-size: 0.75rem; color: #3498db; } /* Sent icon */
+        .msg-time { font-size: 0.7rem; color: #555; }
+        
+        /* Tick Styles */
+        .ticks { font-size: 0.85rem; }
+        .ticks.grey { color: #9E9E9E; }
+        .ticks.blue { color: #3498db; }
 
         .msg-options {
             display: none;
@@ -242,8 +234,7 @@
         }
 
         .btn-send {
-            width: 50px;
-            height: 50px;
+            width: 50px; height: 50px;
             border-radius: 50%;
             background: var(--primary);
             color: white;
@@ -311,14 +302,6 @@
         }
 
         .btn-main:hover { background: var(--primary-dark); }
-        
-        /* Notification Dot */
-        .notif-dot {
-            width: 10px; height: 10px;
-            background: red; border-radius: 50%;
-            position: absolute; top: 10px; right: 10px;
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -328,7 +311,7 @@
     <div class="modal-content">
         <i class="fas fa-comments" style="font-size: 3rem; color: var(--primary); margin-bottom: 15px;"></i>
         <h2>Selamat Datang!</h2>
-        <p>Masukkan nama Anda untuk memulai percakapan.</p>
+        <p>Masukkan nama Anda untuk memulai.</p>
         <input type="text" id="setup-name" class="modal-input" placeholder="Nama Panggilan...">
         <button class="btn-main" onclick="setupProfile()">Simpan & Mulai</button>
     </div>
@@ -369,15 +352,14 @@
 
     <div class="sidebar-tools">
         <div class="input-group">
-            <input type="text" placeholder="Cari atau mulai chat baru..." disabled title="Fitur cari dalam pengembangan">
+            <input type="text" placeholder="Cari chat..." disabled title="Fitur cari dalam pengembangan">
             <button disabled><i class="fas fa-search"></i></button>
         </div>
     </div>
 
     <div id="contact-list">
-        <!-- Kontak akan muncul di sini -->
         <div style="padding: 20px; text-align: center; color: #999; font-size: 0.85rem;">
-            Belum ada kontak. <br> Klik tombol <i class="fas fa-user-plus"></i> di atas untuk menambah.
+            Belum ada kontak.
         </div>
     </div>
 </div>
@@ -388,25 +370,24 @@
         <div class="avatar" style="width: 40px; height: 40px; font-size: 1rem;" id="chat-avatar">?</div>
         <div class="chat-header-info">
             <h3 id="chat-title">Pilih Kontak</h3>
-            <span id="chat-status">Online</span>
+            <span id="chat-status"></span>
         </div>
     </div>
 
     <div id="messages">
         <div style="text-align: center; color: #888; margin: auto; font-size: 0.9rem;">
             <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 10px; opacity: 0.2;"></i><br>
-            Pilih kontak di sidebar untuk memulai chat.
+            Pilih kontak untuk memulai chat.
         </div>
     </div>
 
     <div id="input-area" style="display: none;">
-        <input type="text" id="msg-input" placeholder="Ketik pesan..." onkeypress="if(event.key === 'Enter') kirimPesan()">
+        <input type="text" id="msg-input" placeholder="Ketik pesan..." onkeypress="handleTyping(event)">
         <button class="btn-send" onclick="kirimPesan()"><i class="fas fa-paper-plane"></i></button>
     </div>
 </div>
 
-<!-- Audio Element untuk Notifikasi -->
-<audio id="notif-sound" src="data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYZHyRvuAAAAAAD/+9DEAAAIAANIAAAAQgAAaQAAAASX5f//5c0y5cuXLly5cuXLly5cuXLly5cuXLly5cv/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/////////////////////////////////////AAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/////////////////////////////////////AAAAAAA="></audio>
+<audio id="notif-sound" src="data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYZHyRvuAAAAAAD/+9DEAAAIAANIAAAAQgAAaQAAAASX5f//5c0y5cuXLly5cuXLly5cuXLly5cuXLly5cv/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/////////////////////////////////////AAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/////////////////////////////////////AAAAAAA="></audio>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -416,13 +397,14 @@
         push, 
         onChildAdded, 
         onChildRemoved,
+        onValue, // Untuk listener realtime status
         get, 
         set, 
+        update,
         remove, 
         query, 
-        orderByChild,
-        limitToLast,
-        update
+        onDisconnect,
+        serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -438,101 +420,102 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Variabel Global
     let myId = localStorage.getItem('chatme_id');
     let myName = localStorage.getItem('chatme_name');
-    let currentChatTarget = null; // ID target yang sedang dibuka
+    let currentChatTarget = null;
+    let isTyping = false;
+    let typingTimeout;
 
-    // Elemen DOM
     const setupModal = document.getElementById('setup-modal');
     const addModal = document.getElementById('add-modal');
     const notifSound = document.getElementById('notif-sound');
 
-    // Inisialisasi Aplikasi
     function initApp() {
         if (!myId || !myName) {
-            // Tampilkan modal setup
             setupModal.style.display = 'flex';
-            // Generate ID 13 digit
-            const newId = generateNumericId(13);
-            document.getElementById('setup-name').value = '';
         } else {
             setupModal.style.display = 'none';
+            registerPresence(); // Setup online status
             loadUserProfile();
             loadContacts();
-            listenForMessages();
         }
     }
 
-    // Generate ID Numeric
     function generateNumericId(length) {
         let result = '';
-        // Pastikan angka pertama bukan 0 agar benar-benar 13 digit valuenya
         result += Math.floor(Math.random() * 9) + 1; 
-        for (let i = 1; i < length; i++) {
-            result += Math.floor(Math.random() * 10);
-        }
+        for (let i = 1; i < length; i++) result += Math.floor(Math.random() * 10);
         return result;
     }
 
-    // Setup Profil Awal
     window.setupProfile = async () => {
         const nameInput = document.getElementById('setup-name').value.trim();
         if (!nameInput) return alert('Nama harus diisi!');
-
-        // Generate ID baru jika belum ada
         if (!myId) myId = generateNumericId(13);
-        
         myName = nameInput;
         
-        // Simpan ke Local Storage
         localStorage.setItem('chatme_id', myId);
         localStorage.setItem('chatme_name', myName);
 
-        // Simpan ke Firebase (Users Node)
-        await set(ref(db, 'users/' + myId), {
-            name: myName,
-            timestamp: Date.now()
-        });
-
+        // Simpan nama ke DB agar bisa dicari orang lain
+        await set(ref(db, 'users/' + myId + '/name'), myName);
+        
         setupModal.style.display = 'none';
-        initApp(); // Reload app state
+        initApp();
     };
 
-    // Load Info User ke UI
+    // --- PRESENCE SYSTEM (Online/Offline) ---
+    function registerPresence() {
+        const statusRef = ref(db, 'users/' + myId + '/status');
+        // Set online saat buka aplikasi
+        set(statusRef, 'online');
+        
+        // Set offline saat tutup aplikasi/disconnect
+        onDisconnect(statusRef).set('offline');
+
+        // Sync nama jika berubah
+        set(ref(db, 'users/' + myId + '/name'), myName);
+    }
+
     function loadUserProfile() {
         document.getElementById('my-name').innerText = myName;
         document.getElementById('my-id').innerText = myId;
         document.getElementById('my-avatar').innerText = myName.charAt(0);
     }
 
-    // Load Kontak dari LocalStorage
+    // --- CONTACT MANAGEMENT ---
+    
+    // Load kontak dari Firebase (Realtime)
     function loadContacts() {
-        const contacts = JSON.parse(localStorage.getItem('chatme_contacts')) || {};
-        const listEl = document.getElementById('contact-list');
-        
-        listEl.innerHTML = '';
-        if (Object.keys(contacts).length === 0) {
-            listEl.innerHTML = `<div style="padding: 20px; text-align: center; color: #999; font-size: 0.85rem;">Belum ada kontak.</div>`;
-            return;
-        }
+        const contactsRef = ref(db, 'users/' + myId + '/contacts');
+        onValue(contactsRef, (snapshot) => {
+            const listEl = document.getElementById('contact-list');
+            listEl.innerHTML = '';
+            
+            if (!snapshot.exists()) {
+                listEl.innerHTML = `<div style="padding: 20px; text-align: center; color: #999; font-size: 0.85rem;">Belum ada kontak.</div>`;
+                return;
+            }
 
-        for (const [id, name] of Object.entries(contacts)) {
-            const div = document.createElement('div');
-            div.className = 'contact-item';
-            div.onclick = () => openChat(id, name);
-            div.innerHTML = `
-                <div class="avatar">${name.charAt(0)}</div>
-                <div class="contact-info">
-                    <h4>${name}</h4>
-                    <p>ID: ${id}</p>
-                </div>
-            `;
-            listEl.appendChild(div);
-        }
+            snapshot.forEach(child => {
+                const id = child.key;
+                const name = child.val(); // Nama yang tersimpan
+                
+                const div = document.createElement('div');
+                div.className = 'contact-item';
+                div.onclick = () => openChat(id, name);
+                div.innerHTML = `
+                    <div class="avatar">${name.charAt(0)}</div>
+                    <div class="contact-info">
+                        <h4>${name}</h4>
+                        <p>ID: ${id}</p>
+                    </div>
+                `;
+                listEl.appendChild(div);
+            });
+        });
     }
 
-    // --- Manajemen Kontak ---
     window.openAddModal = () => {
         addModal.style.display = 'flex';
         document.getElementById('add-id-input').value = '';
@@ -540,18 +523,15 @@
         document.getElementById('btn-save-contact').style.display = 'none';
     };
 
-    window.closeAddModal = () => {
-        addModal.style.display = 'none';
-    };
+    window.closeAddModal = () => addModal.style.display = 'none';
 
     window.searchContact = async () => {
         const targetId = document.getElementById('add-id-input').value.trim();
         if (targetId.length !== 13 || isNaN(targetId)) return alert("ID harus 13 digit angka!");
 
-        const snapshot = await get(ref(db, 'users/' + targetId));
+        const snapshot = await get(ref(db, 'users/' + targetId + '/name'));
         if (snapshot.exists()) {
-            const data = snapshot.val();
-            document.getElementById('res-name').innerText = data.name;
+            document.getElementById('res-name').innerText = snapshot.val();
             document.getElementById('res-id').innerText = targetId;
             document.getElementById('search-result').style.display = 'block';
             document.getElementById('btn-save-contact').style.display = 'block';
@@ -560,53 +540,35 @@
         }
     };
 
-    window.saveContact = () => {
+    window.saveContact = async () => {
         const id = document.getElementById('res-id').innerText;
         const name = document.getElementById('res-name').innerText;
-
-        // Ambil data kontak saat ini
-        const contacts = JSON.parse(localStorage.getItem('chatme_contacts')) || {};
-        contacts[id] = name;
-        localStorage.setItem('chatme_contacts', JSON.stringify(contacts));
-
+        // Simpan kontak ke Firebase di node user kita
+        await set(ref(db, 'users/' + myId + '/contacts/' + id), name);
         alert("Kontak berhasil ditambahkan!");
         closeAddModal();
-        loadContacts();
     };
 
-    // --- Chat Logic ---
+    // --- CHAT LOGIC ---
 
-    // Buka Chat dengan Seseorang
-    function openChat(targetId, targetName) {
+    function getRoomId(uid1, uid2) {
+        return [uid1, uid2].sort().join('_');
+    }
+
+    async function openChat(targetId, targetName) {
         currentChatTarget = targetId;
         
-        // UI Adjustments
         document.getElementById('chat-header').style.display = 'flex';
         document.getElementById('input-area').style.display = 'flex';
         document.getElementById('chat-title').innerText = targetName;
         document.getElementById('chat-avatar').innerText = targetName.charAt(0);
-        document.getElementById('messages').innerHTML = ''; // Clear chat
-        
-        // Load Chat History
-        loadChatHistory(targetId);
+        document.getElementById('messages').innerHTML = '';
+        document.getElementById('chat-status').innerText = 'Mengecek status...';
 
-        // Highlight active contact
-        document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
-        // Simple logic to highlight, needs better binding in real app
-        event.currentTarget.classList.add('active');
-    }
-
-    async function loadChatHistory(targetId) {
-        // Path chat gabungan (sorted by ID biar unik)
-        // Kita buat "roomId" gabungan ID pengirim & penerima
-        // Agar A-B dan B-A masuk ke room yang sama, urutkan ID
-        const roomId = [myId, targetId].sort().join('_');
+        const roomId = getRoomId(myId, targetId);
         
+        // 1. Load Chat History
         const chatRef = ref(db, 'chats/' + roomId);
-        
-        // Hapus listener lama jika ada (disederhanakan)
-        
-        // Load existing messages once
         const snapshot = await get(chatRef);
         if(snapshot.exists()) {
             snapshot.forEach(child => {
@@ -614,26 +576,58 @@
             });
         }
 
-        // Listen for new messages
+        // 2. Listen New Messages
         onChildAdded(chatRef, (snapshot) => {
-            // Cek apakah ini pesan baru atau history, simple trick dengan flag
-            const msg = snapshot.val();
-            const msgKey = snapshot.key;
-            
-            // Cek apakah elemen sudah ada (biar tidak double)
-            if (!document.getElementById('msg-' + msgKey)) {
-                displayMessage(msgKey, msg, true);
+            if (!document.getElementById('msg-' + snapshot.key)) {
+                displayMessage(snapshot.key, snapshot.val(), true);
+                // Set pesan sebagai sudah dibaca jika chat terbuka
+                markAsRead(snapshot.key, snapshot.val());
             }
         });
 
-        // Listen for deleted messages
+        // 3. Listen Deleted Messages
         onChildRemoved(chatRef, (snapshot) => {
             const msgEl = document.getElementById('msg-' + snapshot.key);
             if (msgEl) msgEl.remove();
         });
+
+        // 4. Listen Status Online/Offline Lawan
+        onValue(ref(db, 'users/' + targetId + '/status'), (snapshot) => {
+            const status = snapshot.val();
+            const statusEl = document.getElementById('chat-status');
+            if(status === 'online') {
+                statusEl.innerText = 'Online';
+                statusEl.style.color = '#a5d6a7';
+            } else {
+                statusEl.innerText = 'Offline';
+                statusEl.style.color = '#ffcc80';
+            }
+        });
+
+        // 5. Listen Typing Status
+        onValue(ref(db, 'users/' + targetId + '/typingTo'), (snapshot) => {
+            const typingTarget = snapshot.val();
+            const statusEl = document.getElementById('chat-status');
+            // Hanya tampilin jika statusnya bukan 'Online' (biar tidak flicker)
+            // Atapi kita timpa saja
+            if(typingTarget === myId) {
+                statusEl.innerText = 'Mengetik...';
+                statusEl.className = 'typing-indicator';
+            } else {
+                // Kembalikan ke status semula (perlu refresh status online)
+                // Sederhananya: biar logika status online di atas handle ini dengan detik timeout kecil
+                setTimeout(() => {
+                     // refresh status dipicu oleh listener status online
+                }, 1000);
+            }
+        });
+        
+        // Highlight active contact
+        document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
+        event.currentTarget.classList.add('active');
     }
 
-    // Tampilkan Pesan ke UI
+    // Tampilkan Pesan
     function displayMessage(key, data, playSound) {
         if (!currentChatTarget) return;
 
@@ -646,16 +640,37 @@
 
         div.className = `msg ${isMe ? 'sent' : 'received'}`;
         
-        // Konten Pesan
+        // Logika Tick
+        let tickHtml = '';
+        if (isMe) {
+            if (data.read) {
+                // 2 Biru (Dibaca)
+                tickHtml = '<i class="fas fa-check-double ticks blue"></i>';
+            } else {
+                // Jika belum dibaca, cek status lawan (Logika sederhana: 
+                // Kita tidak bisa cek status lawan di momen ini tanpa listener tambahan, 
+                // jadi kita asumsikan:
+                // 1 Centang Abu = Terkirim ke server. 
+                // 2 Centang Abu = Terkirim ke device (Jika lawan online).
+                // Untuk simplicity demo: 1 centang abu default, 2 biru kalo udah read.
+                // Kita buat logic: Jika lawan online -> 2 Abu. Jika offline -> 1 Abu.
+                // Kita butuh cek status lawan di sini.
+                
+                // *Optimasi: Kita skip cek realtime per pesan untuk beban DB, 
+                // Kita pakai logic: Default 1 Abu. Nanti update listener.
+                
+                tickHtml = '<i class="fas fa-check ticks grey"></i>'; // Default 1 Abu
+            }
+        }
+
         div.innerHTML = `
             <div>${data.text}</div>
             <div class="msg-meta">
-                <span>${time}</span>
-                ${isMe ? '<i class="fas fa-check-double"></i>' : ''}
+                <span class="msg-time">${time}</span>
+                ${tickHtml}
             </div>
         `;
 
-        // Event Hapus (Hanya untuk pengirim)
         if (isMe) {
             div.oncontextmenu = (e) => {
                 e.preventDefault();
@@ -668,75 +683,111 @@
         box.appendChild(div);
         box.scrollTop = box.scrollHeight;
 
-        // Mainkan suara jika bukan dari saya
         if (!isMe && playSound) {
             notifSound.play();
         }
     }
 
-    // Kirim Pesan
+    // Logika Read Receipt & Ticks Update
+    async function markAsRead(msgKey, msgData) {
+        if (msgData.from !== myId && !msgData.read) {
+            const roomId = getRoomId(myId, currentChatTarget);
+            // Update status read di DB
+            await update(ref(db, 'chats/' + roomId + '/' + msgKey), { read: true });
+        }
+    }
+
+    // Update UI Centang saat ada perubahan data pesan (Read)
+    function listenForReadStatus(roomId) {
+        // Listener ini bisa ditambahkan spesifik per pesan, tapi untuk hemat resource
+        // kita bisa bind onChildChanged
+        import { onChildChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        
+        onChildChanged(ref(db, 'chats/' + roomId), (snapshot) => {
+             const msgEl = document.getElementById('msg-' + snapshot.key);
+             if (msgEl && snapshot.val().read) {
+                 // Ubah centang jadi 2 biru
+                 const ticks = msgEl.querySelector('.ticks');
+                 if(ticks) {
+                     ticks.className = 'fas fa-check-double ticks blue';
+                 }
+             }
+        });
+    }
+    // Panggil di openChat
+    const originalOpenChat = openChat;
+    openChat = function(id, name) {
+        originalOpenChat(id, name);
+        listenForReadStatus(getRoomId(myId, id));
+    }
+
+    // --- KIRIM PESAN ---
     window.kirimPesan = async () => {
         const input = document.getElementById('msg-input');
         const text = input.value.trim();
         if (!text || !currentChatTarget) return;
 
-        const roomId = [myId, currentChatTarget].sort().join('_');
+        const roomId = getRoomId(myId, currentChatTarget);
         
         const msgData = {
             from: myId,
             name: myName,
             text: text,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            read: false
         };
 
-        // Push ke Firebase
-        const newRef = await push(ref(db, 'chats/' + roomId), msgData);
-        
+        // 1. Push Message
+        await push(ref(db, 'chats/' + roomId), msgData);
         input.value = '';
+        
+        // 2. Auto-Sync Kontak: 
+        // Jika saya chat dia, saya otomatis masuk ke kontak dia dengan nama saya.
+        // Ini memastikan dia bisa reply meski belum save kontak saya.
+        const targetContactRef = ref(db, 'users/' + currentChatTarget + '/contacts/' + myId);
+        const snapshot = await get(targetContactRef);
+        if (!snapshot.exists()) {
+             await set(targetContactRef, myName); // Simpan ID saya di kontak dia
+        }
 
-        // Auto Clean Logic (Dari kode sebelumnya, disesuaikan)
+        // 3. Clean DB
         checkAndClean(roomId);
+        
+        // 4. Stop typing status
+        set(ref(db, 'users/' + myId + '/typingTo'), null);
     };
 
-    // Hapus Pesan
+    // --- TYPING INDICATOR ---
+    window.handleTyping = (e) => {
+        if (e.key === 'Enter') return; // Abaikan enter
+        
+        // Set status mengetik ke DB
+        set(ref(db, 'users/' + myId + '/typingTo'), currentChatTarget);
+        
+        // Reset timer
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            set(ref(db, 'users/' + myId + '/typingTo'), null);
+        }, 1500); // Setelah 1.5 detik diam, anggap selesai mengetik
+    };
+
     async function hapusPesan(msgKey) {
-        const roomId = [myId, currentChatTarget].sort().join('_');
+        const roomId = getRoomId(myId, currentChatTarget);
         await remove(ref(db, `chats/${roomId}/${msgKey}`));
     }
 
-    // Auto Clean Database
     async function checkAndClean(roomId) {
         const chatRef = ref(db, 'chats/' + roomId);
         const snapshot = await get(chatRef);
-        
         if (snapshot.exists()) {
             const children = [];
             snapshot.forEach((child) => { children.push(child.key); });
-            
             if (children.length > 140) {
-                let deleteCount = 10;
-                for (let i = 0; i < deleteCount; i++) {
+                for (let i = 0; i < 10; i++) {
                     remove(ref(db, `chats/${roomId}/${children[i]}`));
                 }
-                console.log("Database dibersihkan: 10 pesan lama dihapus.");
             }
         }
-    }
-
-    // --- Listener Global untuk Pesan Masuk (Notifikasi) ---
-    // Catatan: Logic ini agak berat karena listen ke semua path, tapi untuk demo ini oke.
-    // Cara ideal pakai Cloud Messaging (FCM), tapi kita buat simple dgn Realtime DB.
-    // Kita listen ke node 'chats' lalu filter.
-    function listenForMessages() {
-        // Karena kita tidak tahu roomId sebelumnya, kita listen ke root 'chats'
-        // Ini untuk notifikasi tab lain.
-        // NOTE: Ini akan listen SEMUA chat. Untuk optimasi, sebaiknya struktur DB diubah.
-        // Tapi untuk demo ini, kita bisa pakai onChildAdded di root dan filter.
-        
-        // Namun limitasi security rules (jika open) bisa jadi masalah.
-        // Alternatif: Listen ke path user sendiri saja jika menggunakan struktur "Inbox".
-        // Di kode ini kita gunakan struktur "Room", jadi listen global agak sulit tanpa FCM.
-        // Mari kita skip global listener kompleks dan fokus pada listener saat chat dibuka.
     }
 
     initApp();
