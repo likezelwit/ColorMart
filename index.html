@@ -77,7 +77,7 @@
             font-size: 1.2rem;
             text-transform: uppercase;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            color: white; /* Default, will be overridden by JS */
+            color: white;
         }
 
         .my-info h3 { font-size: 1rem; margin-bottom: 2px; }
@@ -368,7 +368,7 @@
 
         /* Context Menu */
         .context-menu {
-            position: absolute;
+            position: fixed; /* Changed to fixed for better positioning */
             background: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             border-radius: 8px;
@@ -391,9 +391,9 @@
 
 <!-- Context Menu (Hidden) -->
 <div id="context-menu" class="context-menu">
-    <div onclick="replyMessage()">Balas (Reply)</div>
-    <div id="ctx-edit" onclick="editMessage()">Edit Pesan</div>
-    <div class="danger" onclick="deleteMessage()">Hapus untuk Semua</div>
+    <div id="ctx-reply">Balas (Reply)</div>
+    <div id="ctx-edit">Edit Pesan</div>
+    <div id="ctx-delete" class="danger">Hapus untuk Semua</div>
 </div>
 
 <!-- MODAL: Setup Profil -->
@@ -403,7 +403,7 @@
         <h2>Selamat Datang!</h2>
         <p>Masukkan nama Anda untuk memulai.</p>
         <input type="text" id="setup-name" class="modal-input" placeholder="Nama Panggilan...">
-        <button class="btn-main" onclick="setupProfile()">Simpan & Mulai</button>
+        <button class="btn-main" id="btn-setup">Simpan & Mulai</button>
     </div>
 </div>
 
@@ -419,9 +419,9 @@
                 <span id="res-id" style="font-size:0.8rem; color:var(--text-light)">-</span>
             </div>
         </div>
-        <button class="btn-main" onclick="searchContact()">Cari Kontak</button>
-        <button class="btn-main" id="btn-save-contact" style="display:none; background:var(--accent); margin-top:10px;" onclick="saveContact()">Tambahkan</button>
-        <button class="btn-main" style="background:#eee; color:#555; margin-top:10px;" onclick="closeAddModal()">Batal</button>
+        <button class="btn-main" id="btn-search">Cari Kontak</button>
+        <button class="btn-main" id="btn-save-contact" style="display:none; background:var(--accent); margin-top:10px;">Tambahkan</button>
+        <button class="btn-main" id="btn-cancel-modal" style="background:#eee; color:#555; margin-top:10px;">Batal</button>
     </div>
 </div>
 
@@ -436,8 +436,8 @@
             </div>
         </div>
         <div class="sidebar-actions">
-            <i class="fas fa-moon" id="dark-mode-toggle" title="Mode Gelap" onclick="toggleDarkMode()"></i>
-            <i class="fas fa-user-plus" title="Tambah Kontak" onclick="openAddModal()"></i>
+            <i class="fas fa-moon" id="dark-mode-toggle" title="Mode Gelap"></i>
+            <i class="fas fa-user-plus" id="add-contact-btn" title="Tambah Kontak"></i>
         </div>
     </div>
 
@@ -474,14 +474,14 @@
 
     <div id="input-area" style="display: none;">
         <div id="reply-container">
-            <div class="close-reply" onclick="cancelReply()"><i class="fas fa-times"></i></div>
+            <div id="close-reply-btn" class="close-reply"><i class="fas fa-times"></i></div>
             <div id="reply-text" style="font-weight: bold; color: var(--primary-dark);"></div>
             <div id="reply-preview" style="color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
         </div>
         
         <div class="input-row">
-            <input type="text" id="msg-input" placeholder="Ketik pesan..." onkeypress="handleTyping(event)">
-            <button class="btn-send" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+            <input type="text" id="msg-input" placeholder="Ketik pesan...">
+            <button class="btn-send" id="send-btn"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
 </div>
@@ -526,9 +526,14 @@
     let typingTimeout;
     
     // State untuk Fitur
-    let replyingTo = null; // Menyimpan key pesan yang dibalas
-    let editingKey = null; // Menyimpan key pesan yang diedit
+    let replyingTo = null;
+    let editingKey = null;
     let longPressTimer;
+
+    // Listener References (Untuk Cleanup)
+    let unsubChatListener = null;
+    let unsubStatusListener = null;
+    let unsubTypingListener = null;
 
     const setupModal = document.getElementById('setup-modal');
     const addModal = document.getElementById('add-modal');
@@ -569,7 +574,8 @@
         return result;
     }
 
-    window.setupProfile = async () => {
+    // --- SETUP & PROFILE ---
+    document.getElementById('btn-setup').onclick = async () => {
         const nameInput = document.getElementById('setup-name').value.trim();
         if (!nameInput) return alert('Nama harus diisi!');
         if (!myId) myId = generateNumericId(13);
@@ -587,16 +593,9 @@
     // --- PRESENCE & LAST SEEN ---
     function registerPresence() {
         const statusRef = ref(db, 'users/' + myId + '/status');
-        // Set Online
         set(statusRef, 'online');
-        
-        // Set Last Seen saat disconnect
         onDisconnect(statusRef).set(serverTimestamp);
-
-        // Sync nama
         set(ref(db, 'users/' + myId + '/name'), myName);
-        
-        // Bersihkan status typing jika disconnect
         onDisconnect(ref(db, 'users/' + myId + '/typingTo')).remove();
     }
 
@@ -610,7 +609,7 @@
     }
 
     // --- DARK MODE ---
-    window.toggleDarkMode = () => {
+    document.getElementById('dark-mode-toggle').onclick = () => {
         const body = document.body;
         const icon = document.getElementById('dark-mode-toggle');
         if (body.getAttribute('data-theme') === 'dark') {
@@ -642,7 +641,7 @@
                 
                 const div = document.createElement('div');
                 div.className = 'contact-item';
-                div.onclick = function() { openChat(id, name, this); };
+                div.onclick = () => openChat(id, name, div);
                 
                 const color = getColorFromString(name);
                 
@@ -658,21 +657,20 @@
         });
     }
 
-    window.openAddModal = () => {
+    document.getElementById('add-contact-btn').onclick = () => {
         addModal.style.display = 'flex';
         document.getElementById('add-id-input').value = '';
         document.getElementById('search-result').style.display = 'none';
         document.getElementById('btn-save-contact').style.display = 'none';
     };
 
-    window.closeAddModal = () => addModal.style.display = 'none';
+    document.getElementById('btn-cancel-modal').onclick = () => addModal.style.display = 'none';
 
-    window.searchContact = async () => {
+    document.getElementById('btn-search').onclick = async () => {
         const targetId = document.getElementById('add-id-input').value.trim();
         if (targetId.length !== 13 || isNaN(targetId)) return alert("ID harus 13 digit angka!");
         if (targetId === myId) return alert("Tidak bisa menambahkan ID sendiri!");
 
-        // Cek duplikat
         const contactCheck = await get(ref(db, 'users/' + myId + '/contacts/' + targetId));
         if (contactCheck.exists()) return alert("Kontak sudah ada di daftar!");
 
@@ -687,12 +685,12 @@
         }
     };
 
-    window.saveContact = async () => {
+    document.getElementById('btn-save-contact').onclick = async () => {
         const id = document.getElementById('res-id').innerText;
         const name = document.getElementById('res-name').innerText;
         await set(ref(db, 'users/' + myId + '/contacts/' + id), name);
         alert("Kontak berhasil ditambahkan!");
-        closeAddModal();
+        addModal.style.display = 'none';
     };
 
     // --- CHAT LOGIC ---
@@ -704,6 +702,11 @@
     async function openChat(targetId, targetName, elementRef) {
         currentChatTarget = targetId;
         
+        // Cleanup previous listeners
+        if (unsubChatListener) unsubChatListener();
+        if (unsubStatusListener) unsubStatusListener();
+        if (unsubTypingListener) unsubTypingListener();
+
         document.getElementById('chat-header').style.display = 'flex';
         document.getElementById('input-area').style.display = 'flex';
         document.getElementById('chat-title').innerText = targetName;
@@ -717,16 +720,14 @@
         document.getElementById('messages').innerHTML = '';
         document.getElementById('chat-status').innerText = 'Mengecek status...';
         
-        cancelReply(); // Reset reply state
-        editingKey = null; // Reset edit state
+        cancelReply();
+        editingKey = null;
 
         const roomId = getRoomId(myId, targetId);
         
-        // Listeners
         loadChatListeners(roomId);
         listenForStatus(targetId);
         
-        // Highlight Active
         document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
         if(elementRef) elementRef.classList.add('active');
     }
@@ -734,7 +735,7 @@
     function loadChatListeners(roomId) {
         const chatRef = ref(db, 'chats/' + roomId);
 
-        // 1. Load History
+        // Load History
         get(chatRef).then(snapshot => {
             if(snapshot.exists()) {
                 snapshot.forEach(child => {
@@ -743,40 +744,36 @@
             }
         });
 
-        // 2. Listen New
-        onChildAdded(chatRef, (snapshot) => {
+        // Listen New
+        unsubChatListener = onChildAdded(chatRef, (snapshot) => {
             if (!document.getElementById('msg-' + snapshot.key)) {
                 displayMessage(snapshot.key, snapshot.val(), true);
                 markAsRead(snapshot.key, snapshot.val());
             }
         });
 
-        // 3. Listen Deleted
+        // Listen Deleted
         onChildRemoved(chatRef, (snapshot) => {
             const msgEl = document.getElementById('msg-' + snapshot.key);
             if (msgEl) msgEl.remove();
         });
 
-        // 4. Listen Edited/Read
+        // Listen Edited/Read
         onChildChanged(chatRef, (snapshot) => {
              const msgEl = document.getElementById('msg-' + snapshot.key);
              const data = snapshot.val();
              if (msgEl) {
-                 // Update Read Status (UI only)
                  if (data.read) {
                      const ticks = msgEl.querySelector('.ticks');
                      if(ticks) ticks.className = 'fas fa-check-double ticks blue';
                  }
-                 // Update Text if edited
                  if (data.edited) {
                      const textEl = msgEl.querySelector('.text-content');
                      if(textEl) textEl.innerText = data.text;
-                     // Add edited label if not exists
                      let meta = msgEl.querySelector('.msg-meta');
                      let editedLabel = document.createElement('span');
                      editedLabel.className = 'msg-edited';
                      editedLabel.innerText = 'edited';
-                     // simple logic to prevent double label
                      if(!meta.querySelector('.msg-edited')) meta.insertBefore(editedLabel, meta.firstChild);
                  }
              }
@@ -785,9 +782,10 @@
 
     function listenForStatus(targetId) {
         const statusRef = ref(db, 'users/' + targetId + '/status');
-        onValue(statusRef, (snapshot) => {
+        const statusEl = document.getElementById('chat-status'); // Definisikan di sini
+        
+        unsubStatusListener = onValue(statusRef, (snapshot) => {
             const status = snapshot.val();
-            const statusEl = document.getElementById('chat-status');
             
             if(status === 'online') {
                 isTargetOnline = true;
@@ -796,7 +794,6 @@
                 statusEl.style.color = '#a5d6a7';
             } else {
                 isTargetOnline = false;
-                // Format Last Seen
                 if (status && typeof status === 'number') {
                     const date = new Date(status);
                     const timeStr = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
@@ -817,10 +814,13 @@
         });
 
         // Typing
-        onValue(ref(db, 'users/' + targetId + '/typingTo'), (snapshot) => {
+        const typingRef = ref(db, 'users/' + targetId + '/typingTo');
+        unsubTypingListener = onValue(typingRef, (snapshot) => {
+            // Pastikan statusEl sudah diambil
+            const currentStatusEl = document.getElementById('chat-status');
             if(snapshot.val() === myId) {
-                statusEl.innerText = 'Mengetik...';
-                statusEl.className = 'typing-indicator';
+                currentStatusEl.innerText = 'Mengetik...';
+                currentStatusEl.className = 'typing-indicator';
             }
         });
     }
@@ -838,7 +838,6 @@
 
         div.className = `msg ${isMe ? 'sent' : 'received'}`;
         
-        // Logika Tick
         let tickHtml = '';
         if (isMe) {
             if (data.read) {
@@ -849,7 +848,6 @@
             }
         }
 
-        // Logika Reply
         let replyHtml = '';
         if (data.replyTo) {
             replyHtml = `
@@ -859,7 +857,6 @@
                 </div>`;
         }
 
-        // Edited Label
         let editedLabelHtml = data.edited ? '<span class="msg-edited">edited</span>' : '';
 
         div.innerHTML = `
@@ -872,12 +869,12 @@
             </div>
         `;
 
-        // Context Menu Trigger (Right Click / Long Press)
-        div.oncontextmenu = (e) => showContextMenu(e, key, data);
+        // Context Menu Trigger
+        div.oncontextmenu = (e) => showContextMenu(e, key, data, isMe);
 
         // Long Press for Mobile
         div.ontouchstart = (e) => {
-            longPressTimer = setTimeout(() => showContextMenu(e, key, data), 500);
+            longPressTimer = setTimeout(() => showContextMenu(e, key, data, isMe), 500);
         };
         div.ontouchend = () => clearTimeout(longPressTimer);
         div.ontouchmove = () => clearTimeout(longPressTimer);
@@ -892,28 +889,30 @@
     let selectedMsgKey = null;
     let selectedMsgData = null;
 
-    function showContextMenu(e, key, data) {
+    function showContextMenu(e, key, data, isMe) {
         e.preventDefault();
         selectedMsgKey = key;
         selectedMsgData = data;
         
         const editOpt = document.getElementById('ctx-edit');
-        // Hanya tampilan edit untuk pesan sendiri
-        editOpt.style.display = (data.from === myId) ? 'block' : 'none';
+        editOpt.style.display = (isMe) ? 'block' : 'none';
 
-        // Position
         contextMenu.style.display = 'block';
-        contextMenu.style.left = `${e.pageX}px`;
-        contextMenu.style.top = `${e.pageY}px`;
         
-        // Close listener
+        // Posisi agar tidak keluar layar
+        let x = e.pageX || (e.touches && e.touches[0].pageX);
+        let y = e.pageY || (e.touches && e.touches[0].pageY);
+        
+        contextMenu.style.left = `${x}px`;
+        contextMenu.style.top = `${y}px`;
+        
         document.onclick = () => {
             contextMenu.style.display = 'none';
             document.onclick = null;
         };
     }
 
-    window.replyMessage = () => {
+    document.getElementById('ctx-reply').onclick = () => {
         if(!selectedMsgData) return;
         replyingTo = { key: selectedMsgKey, ...selectedMsgData };
         document.getElementById('reply-container').classList.add('active');
@@ -922,21 +921,20 @@
         document.getElementById('msg-input').focus();
     };
 
-    window.cancelReply = () => {
+    document.getElementById('close-reply-btn').onclick = () => {
         replyingTo = null;
         document.getElementById('reply-container').classList.remove('active');
     };
 
-    window.editMessage = () => {
+    document.getElementById('ctx-edit').onclick = () => {
         if(!selectedMsgData || selectedMsgData.from !== myId) return;
         editingKey = selectedMsgKey;
         const input = document.getElementById('msg-input');
         input.value = selectedMsgData.text;
         input.focus();
-        // Visual feedback bisa ditambahkan
     };
 
-    window.deleteMessage = async () => {
+    document.getElementById('ctx-delete').onclick = async () => {
         if(!selectedMsgKey) return;
         if(confirm("Hapus pesan ini?")) {
             const roomId = getRoomId(myId, currentChatTarget);
@@ -945,7 +943,7 @@
     };
 
     // --- SEND / UPDATE MESSAGE ---
-    window.sendMessage = async () => {
+    document.getElementById('send-btn').onclick = async () => {
         const input = document.getElementById('msg-input');
         const text = input.value.trim();
         if (!text || !currentChatTarget) return;
@@ -953,14 +951,12 @@
         const roomId = getRoomId(myId, currentChatTarget);
 
         if (editingKey) {
-            // MODE EDIT
             await update(ref(db, 'chats/' + roomId + '/' + editingKey), {
                 text: text,
                 edited: true
             });
-            editingKey = null; // Reset
+            editingKey = null;
         } else {
-            // MODE KIRIM BARU
             const msgData = {
                 from: myId,
                 name: myName,
@@ -969,7 +965,6 @@
                 read: false
             };
 
-            // Tambahkan Reply jika ada
             if (replyingTo) {
                 msgData.replyTo = {
                     name: replyingTo.name,
@@ -988,16 +983,20 @@
         }
 
         input.value = '';
-        cancelReply();
+        replyingTo = null;
+        document.getElementById('reply-container').classList.remove('active');
         
-        // Stop typing status
         set(ref(db, 'users/' + myId + '/typingTo'), null);
     };
 
     // --- TYPING INDICATOR ---
-    window.handleTyping = (e) => {
-        if (e.key === 'Enter') return;
+    document.getElementById('msg-input').onkeypress = (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('send-btn').click(); // Trigger send
+            return;
+        }
         
+        // Set typing status
         set(ref(db, 'users/' + myId + '/typingTo'), currentChatTarget);
         
         clearTimeout(typingTimeout);
