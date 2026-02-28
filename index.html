@@ -2,111 +2,114 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>ColorMart Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ColorMart Chat - Firebase</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; height: 100vh; background: #f0f2f5; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; background: #f0f2f5; }
         
-        /* Sidebar Kontak */
-        #sidebar { width: 300px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
-        #sidebar h2 { padding: 20px; background: #075e54; color: white; font-size: 1.2rem; }
-        #contact-list { list-style: none; overflow-y: auto; flex: 1; }
-        .contact-item { padding: 15px 20px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.3s; }
-        .contact-item:hover { background: #f5f5f5; }
-        .contact-item.active { background: #e9edef; font-weight: bold; }
-
-        /* Area Chat */
-        #main-chat { flex: 1; display: flex; flex-direction: column; }
-        #chat-header { padding: 15px 25px; background: #ededed; border-bottom: 1px solid #ddd; font-weight: bold; }
-        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        #sidebar { width: 280px; background: #fff; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+        #sidebar h2 { padding: 20px; background: #0084ff; color: white; font-size: 1.1rem; }
+        .info-box { padding: 15px; font-size: 0.85rem; background: #e7f3ff; border-bottom: 1px solid #ddd; }
         
-        /* Bubble Chat */
-        .msg { max-width: 70%; padding: 8px 12px; border-radius: 8px; font-size: 0.95rem; line-height: 1.4; }
-        .msg.sent { align-self: flex-end; background: #dcf8c6; border: 1px solid #95cc6a; }
-        .msg.received { align-self: flex-start; background: white; border: 1px solid #ddd; }
+        #chat-area { flex: 1; display: flex; flex-direction: column; }
+        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #fff; }
+        
+        .msg { max-width: 70%; padding: 10px 15px; border-radius: 15px; font-size: 0.9rem; line-height: 1.4; position: relative; }
+        .received { align-self: flex-start; background: #f1f0f0; color: #000; }
+        .sent { align-self: flex-end; background: #0084ff; color: white; }
 
-        /* Input Area */
-        #input-area { padding: 15px; background: #f0f2f5; display: flex; gap: 10px; }
-        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
-        button { padding: 10px 20px; background: #075e54; color: white; border: none; border-radius: 25px; cursor: pointer; }
+        #input-area { padding: 15px; background: #fff; border-top: 1px solid #ddd; display: flex; flex-direction: column; gap: 10px; }
+        input { padding: 10px 15px; border: 1px solid #ddd; border-radius: 8px; outline: none; }
+        button { padding: 10px; background: #0084ff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0073e6; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <h2>Kontak Online</h2>
-    <div style="padding: 10px; font-size: 0.8rem; color: #666;">ID Kamu: <span id="my-id">...</span></div>
-    <ul id="contact-list">
-        </ul>
+    <h2>ColorMart Chat</h2>
+    <div class="info-box">
+        <b>ID KAMU:</b> <br>
+        <span id="my-id" style="color: #0084ff; font-weight: bold;">Generasi ID...</span>
+    </div>
+    <div style="padding: 15px; font-size: 0.8rem; color: #666;">
+        Cara pakai: <br>
+        1. Kasih ID kamu ke teman. <br>
+        2. Masukkan ID teman di kolom bawah. <br>
+        3. Kirim pesan!
+    </div>
 </div>
 
-<div id="main-chat">
-    <div id="chat-header">Pilih kontak untuk mulai chat</div>
+<div id="chat-area">
     <div id="messages"></div>
-    <form id="chat-form" id="input-area" style="display:none; padding: 15px; display: flex; gap: 10px;">
-        <input id="msg-input" placeholder="Ketik pesan..." autocomplete="off" />
-        <button type="submit">Kirim</button>
-    </form>
+    <div id="input-area">
+        <input id="target-id" placeholder="Masukkan ID Teman Tujuan..." />
+        <div style="display: flex; gap: 5px;">
+            <input id="msg-input" style="flex: 1;" placeholder="Ketik pesan..." />
+            <button onclick="kirimPesan()">Kirim</button>
+        </div>
+    </div>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
-    const socket = io();
-    let currentTargetId = null;
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // Tampilkan ID sendiri
-    socket.on('my-id', (id) => { document.getElementById('my-id').innerText = id; });
+    // Konfiguasi Firebase Milik Gilang
+    const firebaseConfig = {
+        apiKey: "AIzaSyCLeX1UZJ_l7eCCGHRHpbj1q-ESCFmkM6g",
+        authDomain: "chatme-4d67e.firebaseapp.com",
+        projectId: "chatme-4d67e",
+        databaseURL: "https://chatme-4d67e-default-rtdb.firebaseio.com", // Pastikan URL database benar
+        storageBucket: "chatme-4d67e.firebasestorage.app",
+        messagingSenderId: "277442645691",
+        appId: "1:277442645691:web:f773cdf216946926b3239e"
+    };
 
-    // Update Daftar Kontak
-    socket.on('update-users', (users) => {
-        const list = document.getElementById('contact-list');
-        list.innerHTML = '';
-        users.forEach(id => {
-            if (id !== socket.id) {
-                const li = document.createElement('li');
-                li.className = `contact-item ${id === currentTargetId ? 'active' : ''}`;
-                li.innerText = `User ${id.substring(0, 5)}...`;
-                li.onclick = () => selectContact(id);
-                list.appendChild(li);
-            }
-        });
-    });
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    function selectContact(id) {
-        currentTargetId = id;
-        document.getElementById('chat-header').innerText = `Chat dengan User ${id.substring(0, 5)}`;
-        document.getElementById('chat-form').style.display = 'flex';
-        document.getElementById('messages').innerHTML = ''; // Reset layar chat
-    }
+    // Buat ID unik sederhana buat kamu
+    const myId = "User-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+    document.getElementById('my-id').innerText = myId;
 
-    // Kirim Pesan
-    document.getElementById('chat-form').onsubmit = (e) => {
-        e.preventDefault();
+    // Fungsi Kirim Pesan
+    window.kirimPesan = () => {
+        const target = document.getElementById('target-id').value.trim();
         const msg = document.getElementById('msg-input').value;
-        if (msg && currentTargetId) {
-            socket.emit('private-message', { targetId: currentTargetId, msg });
-            addMessage(msg, 'sent');
+        
+        if (msg && target) {
+            // Simpan ke database teman (pesan masuk ke dia)
+            push(ref(db, 'chats/' + target), {
+                from: myId,
+                text: msg,
+                timestamp: Date.now()
+            });
+
+            // Tampilkan di layar sendiri
+            tampilPesan(`Ke ${target}: ${msg}`, 'sent');
             document.getElementById('msg-input').value = '';
+        } else {
+            alert("Isi ID tujuan dan pesan dulu!");
         }
     };
 
-    // Terima Pesan
-    socket.on('chat message', (data) => {
-        if (data.from === currentTargetId) {
-            addMessage(data.message, 'received');
-        } else {
-            alert(`Pesan baru dari User ${data.from.substring(0,5)}! Klik kontaknya.`);
-        }
+    // Pantau pesan masuk ke ID kamu
+    onChildAdded(ref(db, 'chats/' + myId), (snapshot) => {
+        const data = snapshot.val();
+        tampilPesan(`Dari ${data.from}: ${data.text}`, 'received');
     });
 
-    function addMessage(text, type) {
+    function tampilPesan(text, tipe) {
         const div = document.createElement('div');
-        div.className = `msg ${type}`;
+        div.className = `msg ${tipe}`;
         div.innerText = text;
         const box = document.getElementById('messages');
         box.appendChild(div);
         box.scrollTop = box.scrollHeight;
     }
 </script>
+
 </body>
 </html>
