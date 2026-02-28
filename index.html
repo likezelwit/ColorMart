@@ -3,22 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ColorMart Chat - Firebase</title>
+    <title>ChatMe</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; background: #f0f2f5; }
-        
         #sidebar { width: 280px; background: #fff; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
         #sidebar h2 { padding: 20px; background: #0084ff; color: white; font-size: 1.1rem; }
         .info-box { padding: 15px; font-size: 0.85rem; background: #e7f3ff; border-bottom: 1px solid #ddd; }
-        
         #chat-area { flex: 1; display: flex; flex-direction: column; }
         #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #fff; }
-        
         .msg { max-width: 70%; padding: 10px 15px; border-radius: 15px; font-size: 0.9rem; line-height: 1.4; position: relative; }
         .received { align-self: flex-start; background: #f1f0f0; color: #000; }
         .sent { align-self: flex-end; background: #0084ff; color: white; }
-
         #input-area { padding: 15px; background: #fff; border-top: 1px solid #ddd; display: flex; flex-direction: column; gap: 10px; }
         input { padding: 10px 15px; border: 1px solid #ddd; border-radius: 8px; outline: none; }
         button { padding: 10px; background: #0084ff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
@@ -46,7 +42,7 @@
     <div id="input-area">
         <input id="target-id" placeholder="Masukkan ID Teman Tujuan..." />
         <div style="display: flex; gap: 5px;">
-            <input id="msg-input" style="flex: 1;" placeholder="Ketik pesan..." />
+            <input id="msg-input" style="flex: 1;" placeholder="Ketik pesan..." onkeypress="if(event.key === 'Enter') kirimPesan()" />
             <button onclick="kirimPesan()">Kirim</button>
         </div>
     </div>
@@ -56,12 +52,12 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // Konfiguasi Firebase Milik Gilang
     const firebaseConfig = {
         apiKey: "AIzaSyCLeX1UZJ_l7eCCGHRHpbj1q-ESCFmkM6g",
         authDomain: "chatme-4d67e.firebaseapp.com",
         projectId: "chatme-4d67e",
-        databaseURL: "https://chatme-4d67e-default-rtdb.firebaseio.com", // Pastikan URL database benar
+        // URL SUDAH DIUPDATE KE SINGAPORE SESUAI ERROR TADI
+        databaseURL: "https://chatme-4d67e-default-rtdb.asia-southeast1.firebasedatabase.app", 
         storageBucket: "chatme-4d67e.firebasestorage.app",
         messagingSenderId: "277442645691",
         appId: "1:277442645691:web:f773cdf216946926b3239e"
@@ -70,32 +66,28 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Buat ID unik sederhana buat kamu
     const myId = "User-" + Math.random().toString(36).substr(2, 6).toUpperCase();
     document.getElementById('my-id').innerText = myId;
 
-    // Fungsi Kirim Pesan
     window.kirimPesan = () => {
         const target = document.getElementById('target-id').value.trim();
-        const msg = document.getElementById('msg-input').value;
+        const msgInput = document.getElementById('msg-input');
+        const msg = msgInput.value;
         
         if (msg && target) {
-            // Simpan ke database teman (pesan masuk ke dia)
             push(ref(db, 'chats/' + target), {
                 from: myId,
                 text: msg,
                 timestamp: Date.now()
             });
 
-            // Tampilkan di layar sendiri
             tampilPesan(`Ke ${target}: ${msg}`, 'sent');
-            document.getElementById('msg-input').value = '';
+            msgInput.value = '';
         } else {
             alert("Isi ID tujuan dan pesan dulu!");
         }
     };
 
-    // Pantau pesan masuk ke ID kamu
     onChildAdded(ref(db, 'chats/' + myId), (snapshot) => {
         const data = snapshot.val();
         tampilPesan(`Dari ${data.from}: ${data.text}`, 'received');
@@ -110,6 +102,5 @@
         box.scrollTop = box.scrollHeight;
     }
 </script>
-
 </body>
 </html>
