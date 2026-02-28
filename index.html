@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ColorMart Chat Pro</title>
+    <title>ColorMart Chat Pro V3</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -14,6 +14,20 @@
             --text-dark: #303030;
             --text-light: #777;
             --white: #ffffff;
+            --bg-chat: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            --bg-body: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        /* Dark Mode Variables */
+        [data-theme="dark"] {
+            --primary: #2A2A2A;
+            --primary-dark: #1A1A1A;
+            --secondary: #121212;
+            --text-dark: #e0e0e0;
+            --text-light: #a0a0a0;
+            --white: #1e1e1e;
+            --bg-chat: #1e1e1e;
+            --bg-body: #121212;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -21,13 +35,14 @@
         body {
             display: flex;
             height: 100vh;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: var(--bg-body);
             overflow: hidden;
+            color: var(--text-dark);
         }
 
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: var(--secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 3px; }
 
         /* Sidebar */
         #sidebar {
@@ -37,6 +52,7 @@
             flex-direction: column;
             box-shadow: 2px 0 10px rgba(0,0,0,0.05);
             z-index: 10;
+            border-right: 1px solid #ddd;
         }
 
         .sidebar-header {
@@ -54,7 +70,6 @@
             width: 45px; height: 45px;
             border-radius: 50%;
             background: var(--white);
-            color: var(--primary);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -62,6 +77,7 @@
             font-size: 1.2rem;
             text-transform: uppercase;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            color: white; /* Default, will be overridden by JS */
         }
 
         .my-info h3 { font-size: 1rem; margin-bottom: 2px; }
@@ -72,13 +88,13 @@
 
         .sidebar-tools {
             padding: 10px 15px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #eee;
+            background: var(--secondary);
+            border-bottom: 1px solid #ddd;
         }
 
         .input-group {
             display: flex;
-            background: white;
+            background: var(--white);
             border-radius: 20px;
             overflow: hidden;
             border: 1px solid #ddd;
@@ -90,17 +106,19 @@
             flex: 1;
             outline: none;
             font-size: 0.9rem;
+            background: transparent;
+            color: var(--text-dark);
         }
 
         .input-group button {
             border: none;
-            background: var(--primary);
+            background: var(--primary-dark);
             color: white;
             padding: 0 20px;
             cursor: pointer;
             transition: 0.2s;
         }
-        .input-group button:hover { background: var(--primary-dark); }
+        .input-group button:hover { background: var(--primary); }
 
         #contact-list { flex: 1; overflow-y: auto; }
 
@@ -112,11 +130,10 @@
             cursor: pointer;
             transition: background 0.2s;
             border-bottom: 1px solid #f0f0f0;
-            position: relative;
         }
 
-        .contact-item:hover { background: #f5f5f5; }
-        .contact-item.active { background: #e3f2fd; border-left: 4px solid var(--accent); }
+        .contact-item:hover { background: var(--secondary); }
+        .contact-item.active { background: var(--primary); color: white; }
 
         .contact-info h4 { font-size: 0.95rem; color: var(--text-dark); }
         .contact-info p { font-size: 0.8rem; color: var(--text-light); margin-top: 3px; }
@@ -126,7 +143,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png') repeat;
+            background: var(--bg-chat);
             position: relative;
         }
 
@@ -169,7 +186,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .msg.received {
-            background: white;
+            background: var(--white);
             align-self: flex-start;
             border-top-left-radius: 0;
         }
@@ -179,6 +196,9 @@
             align-self: flex-end;
             border-top-right-radius: 0;
         }
+        
+        [data-theme="dark"] .msg.sent { background: #2a4f2a; color: #fff; }
+        [data-theme="dark"] .msg.received { background: #333; color: #fff; }
 
         .msg-meta {
             display: flex;
@@ -189,8 +209,21 @@
         }
 
         .msg-time { font-size: 0.7rem; color: #555; }
+        .msg-edited { font-size: 0.65rem; color: #999; margin-right: 5px; font-style: italic; }
         
-        /* Tick Styles */
+        /* Reply/Quote Style */
+        .quoted-msg {
+            border-left: 4px solid var(--accent);
+            background: rgba(0,0,0,0.05);
+            padding: 5px 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        .quoted-msg b { color: var(--primary-dark); }
+
+        /* Ticks */
         .ticks { font-size: 0.85rem; }
         .ticks.grey { color: #9E9E9E; }
         .ticks.blue { color: #3498db; }
@@ -209,14 +242,41 @@
             text-align: center;
             line-height: 24px;
             font-size: 0.8rem;
+            color: #333;
         }
 
         .msg.sent:hover .msg-options { display: block; }
 
         /* Input Area */
         #input-area {
-            background: #f0f0f0;
+            background: var(--secondary);
             padding: 15px;
+            display: flex;
+            flex-direction: column; /* For reply box */
+            gap: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        /* Reply Box Container */
+        #reply-container {
+            display: none;
+            background: var(--white);
+            padding: 10px;
+            border-radius: 10px;
+            border-left: 5px solid var(--accent);
+            position: relative;
+            font-size: 0.85rem;
+        }
+        #reply-container.active { display: block; }
+        #reply-container .close-reply {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            cursor: pointer;
+            opacity: 0.6;
+        }
+
+        .input-row {
             display: flex;
             gap: 10px;
             align-items: center;
@@ -229,12 +289,14 @@
             border: none;
             outline: none;
             font-size: 0.95rem;
+            background: var(--white);
+            color: var(--text-dark);
         }
 
         .btn-send {
             width: 50px; height: 50px;
             border-radius: 50%;
-            background: var(--primary);
+            background: var(--primary-dark);
             color: white;
             border: none;
             cursor: pointer;
@@ -243,7 +305,7 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
-        .btn-send:hover { background: var(--primary-dark); transform: scale(1.05); }
+        .btn-send:hover { background: var(--primary); transform: scale(1.05); }
 
         /* Modals */
         .modal-overlay {
@@ -258,7 +320,7 @@
         }
 
         .modal-content {
-            background: white;
+            background: var(--white);
             padding: 30px;
             border-radius: 15px;
             width: 90%;
@@ -266,6 +328,7 @@
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             animation: slideUp 0.4s ease;
+            color: var(--text-dark);
         }
 
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -282,6 +345,8 @@
             text-align: center;
             font-size: 1rem;
             transition: 0.3s;
+            background: var(--secondary);
+            color: var(--text-dark);
         }
 
         .modal-input:focus { border-color: var(--primary); }
@@ -291,7 +356,7 @@
             padding: 12px;
             border: none;
             border-radius: 8px;
-            background: var(--primary);
+            background: var(--primary-dark);
             color: white;
             font-weight: bold;
             font-size: 1rem;
@@ -299,15 +364,42 @@
             transition: 0.2s;
         }
 
-        .btn-main:hover { background: var(--primary-dark); }
+        .btn-main:hover { background: var(--primary); }
+
+        /* Context Menu */
+        .context-menu {
+            position: absolute;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            z-index: 1000;
+            overflow: hidden;
+            display: none;
+        }
+        .context-menu div {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: #333;
+            text-align: left;
+        }
+        .context-menu div:hover { background: #f0f0f0; }
+        .context-menu div.danger { color: red; }
     </style>
 </head>
 <body>
 
-<!-- MODAL: Setup Profil Awal -->
+<!-- Context Menu (Hidden) -->
+<div id="context-menu" class="context-menu">
+    <div onclick="replyMessage()">Balas (Reply)</div>
+    <div id="ctx-edit" onclick="editMessage()">Edit Pesan</div>
+    <div class="danger" onclick="deleteMessage()">Hapus untuk Semua</div>
+</div>
+
+<!-- MODAL: Setup Profil -->
 <div id="setup-modal" class="modal-overlay">
     <div class="modal-content">
-        <i class="fas fa-comments" style="font-size: 3rem; color: var(--primary); margin-bottom: 15px;"></i>
+        <i class="fas fa-comments" style="font-size: 3rem; color: var(--primary-dark); margin-bottom: 15px;"></i>
         <h2>Selamat Datang!</h2>
         <p>Masukkan nama Anda untuk memulai.</p>
         <input type="text" id="setup-name" class="modal-input" placeholder="Nama Panggilan...">
@@ -319,16 +411,16 @@
 <div id="add-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <h2><i class="fas fa-user-plus"></i> Tambah Kontak</h2>
-        <p style="margin-top: 5px;">Masukkan 13 digit ID teman Anda.</p>
+        <p>Masukkan 13 digit ID teman Anda.</p>
         <input type="number" id="add-id-input" class="modal-input" placeholder="ID Teman (13 Digit)" maxlength="13">
         <div id="search-result" style="margin-bottom: 15px; text-align: left; display:none;">
-            <div style="background:#f9f9f9; padding:10px; border-radius:8px; border:1px solid #eee;">
+            <div style="background:var(--secondary); padding:10px; border-radius:8px; border:1px solid #eee;">
                 <h4 id="res-name" style="color:var(--text-dark)">-</h4>
                 <span id="res-id" style="font-size:0.8rem; color:var(--text-light)">-</span>
             </div>
         </div>
         <button class="btn-main" onclick="searchContact()">Cari Kontak</button>
-        <button class="btn-main" id="btn-save-contact" style="display:none; background:var(--accent); margin-top:10px;" onclick="saveContact()">Tambahkan ke Daftar</button>
+        <button class="btn-main" id="btn-save-contact" style="display:none; background:var(--accent); margin-top:10px;" onclick="saveContact()">Tambahkan</button>
         <button class="btn-main" style="background:#eee; color:#555; margin-top:10px;" onclick="closeAddModal()">Batal</button>
     </div>
 </div>
@@ -344,6 +436,7 @@
             </div>
         </div>
         <div class="sidebar-actions">
+            <i class="fas fa-moon" id="dark-mode-toggle" title="Mode Gelap" onclick="toggleDarkMode()"></i>
             <i class="fas fa-user-plus" title="Tambah Kontak" onclick="openAddModal()"></i>
         </div>
     </div>
@@ -356,7 +449,7 @@
     </div>
 
     <div id="contact-list">
-        <div style="padding: 20px; text-align: center; color: #999; font-size: 0.85rem;">
+        <div style="padding: 20px; text-align: center; color: var(--text-light); font-size: 0.85rem;">
             Belum ada kontak.
         </div>
     </div>
@@ -380,15 +473,22 @@
     </div>
 
     <div id="input-area" style="display: none;">
-        <input type="text" id="msg-input" placeholder="Ketik pesan..." onkeypress="handleTyping(event)">
-        <button class="btn-send" onclick="kirimPesan()"><i class="fas fa-paper-plane"></i></button>
+        <div id="reply-container">
+            <div class="close-reply" onclick="cancelReply()"><i class="fas fa-times"></i></div>
+            <div id="reply-text" style="font-weight: bold; color: var(--primary-dark);"></div>
+            <div id="reply-preview" style="color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+        </div>
+        
+        <div class="input-row">
+            <input type="text" id="msg-input" placeholder="Ketik pesan..." onkeypress="handleTyping(event)">
+            <button class="btn-send" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
     </div>
 </div>
 
-<audio id="notif-sound" src="data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYZHyRvuAAAAAAD/+9DEAAAIAANIAAAAQgAAaQAAAASX5f//5c0y5cuXLly5cuXLly5cuXLly5cuXLly5cv/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/////////////////////////////////////AAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/////////////////////////////////////AAAAAAA="></audio>
+<audio id="notif-sound" src="data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYZHyRvuAAAAAAD/+9DEAAAIAANIAAAAQgAAaQAAAASX5f//5c0y5cuXLly5cuXLly5cuXLly5cuXLly5cv/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/////////////////////////////////////AAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/////////////////////////////////////AAAAAAA="></audio>
 
 <script type="module">
-    // 1. IMPORT DI ATAS (Top Level) - Memperbaiki error sebelumnya
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { 
         getDatabase, 
@@ -396,13 +496,13 @@
         push, 
         onChildAdded, 
         onChildRemoved,
-        onChildChanged, // Ditambahkan ke import utama
+        onChildChanged,
         onValue, 
         get, 
         set, 
         update,
         remove, 
-        query, 
+        serverTimestamp,
         onDisconnect
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -422,14 +522,36 @@
     let myId = localStorage.getItem('chatme_id');
     let myName = localStorage.getItem('chatme_name');
     let currentChatTarget = null;
-    let isTargetOnline = false; // State untuk status lawan
+    let isTargetOnline = false;
     let typingTimeout;
+    
+    // State untuk Fitur
+    let replyingTo = null; // Menyimpan key pesan yang dibalas
+    let editingKey = null; // Menyimpan key pesan yang diedit
+    let longPressTimer;
 
     const setupModal = document.getElementById('setup-modal');
     const addModal = document.getElementById('add-modal');
     const notifSound = document.getElementById('notif-sound');
+    const contextMenu = document.getElementById('context-menu');
+
+    // --- HELPER: Warna Avatar Dinamis ---
+    function getColorFromString(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const color = Math.abs(hash).toString(16).substring(0, 6);
+        return `#${'000000'.substring(0, 6 - color.length)}${color}`;
+    }
 
     function initApp() {
+        // Cek Dark Mode
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.setAttribute('data-theme', 'dark');
+            document.getElementById('dark-mode-toggle').className = 'fas fa-sun';
+        }
+
         if (!myId || !myName) {
             setupModal.style.display = 'flex';
         } else {
@@ -462,19 +584,45 @@
         initApp();
     };
 
-    // --- PRESENCE SYSTEM ---
+    // --- PRESENCE & LAST SEEN ---
     function registerPresence() {
         const statusRef = ref(db, 'users/' + myId + '/status');
+        // Set Online
         set(statusRef, 'online');
-        onDisconnect(statusRef).set('offline');
+        
+        // Set Last Seen saat disconnect
+        onDisconnect(statusRef).set(serverTimestamp);
+
+        // Sync nama
         set(ref(db, 'users/' + myId + '/name'), myName);
+        
+        // Bersihkan status typing jika disconnect
+        onDisconnect(ref(db, 'users/' + myId + '/typingTo')).remove();
     }
 
     function loadUserProfile() {
         document.getElementById('my-name').innerText = myName;
         document.getElementById('my-id').innerText = myId;
-        document.getElementById('my-avatar').innerText = myName.charAt(0);
+        const av = document.getElementById('my-avatar');
+        av.innerText = myName.charAt(0);
+        av.style.background = getColorFromString(myName);
+        av.style.color = 'white';
     }
+
+    // --- DARK MODE ---
+    window.toggleDarkMode = () => {
+        const body = document.body;
+        const icon = document.getElementById('dark-mode-toggle');
+        if (body.getAttribute('data-theme') === 'dark') {
+            body.removeAttribute('data-theme');
+            localStorage.setItem('theme', 'light');
+            icon.className = 'fas fa-moon';
+        } else {
+            body.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+            icon.className = 'fas fa-sun';
+        }
+    };
 
     // --- CONTACT MANAGEMENT ---
     function loadContacts() {
@@ -484,7 +632,7 @@
             listEl.innerHTML = '';
             
             if (!snapshot.exists()) {
-                listEl.innerHTML = `<div style="padding: 20px; text-align: center; color: #999; font-size: 0.85rem;">Belum ada kontak.</div>`;
+                listEl.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-light);">Belum ada kontak.</div>`;
                 return;
             }
 
@@ -494,10 +642,12 @@
                 
                 const div = document.createElement('div');
                 div.className = 'contact-item';
-                // Memperbaiki error 'event' dengan mengirim 'div' sebagai context
                 div.onclick = function() { openChat(id, name, this); };
+                
+                const color = getColorFromString(name);
+                
                 div.innerHTML = `
-                    <div class="avatar">${name.charAt(0)}</div>
+                    <div class="avatar" style="background:${color}; color:white;">${name.charAt(0)}</div>
                     <div class="contact-info">
                         <h4>${name}</h4>
                         <p>ID: ${id}</p>
@@ -520,6 +670,11 @@
     window.searchContact = async () => {
         const targetId = document.getElementById('add-id-input').value.trim();
         if (targetId.length !== 13 || isNaN(targetId)) return alert("ID harus 13 digit angka!");
+        if (targetId === myId) return alert("Tidak bisa menambahkan ID sendiri!");
+
+        // Cek duplikat
+        const contactCheck = await get(ref(db, 'users/' + myId + '/contacts/' + targetId));
+        if (contactCheck.exists()) return alert("Kontak sudah ada di daftar!");
 
         const snapshot = await get(ref(db, 'users/' + targetId + '/name'));
         if (snapshot.exists()) {
@@ -552,22 +707,43 @@
         document.getElementById('chat-header').style.display = 'flex';
         document.getElementById('input-area').style.display = 'flex';
         document.getElementById('chat-title').innerText = targetName;
-        document.getElementById('chat-avatar').innerText = targetName.charAt(0);
+        
+        const color = getColorFromString(targetName);
+        const chatAv = document.getElementById('chat-avatar');
+        chatAv.innerText = targetName.charAt(0);
+        chatAv.style.background = color;
+        chatAv.style.color = 'white';
+
         document.getElementById('messages').innerHTML = '';
         document.getElementById('chat-status').innerText = 'Mengecek status...';
+        
+        cancelReply(); // Reset reply state
+        editingKey = null; // Reset edit state
 
         const roomId = getRoomId(myId, targetId);
         
-        // 1. Load Chat History
-        const chatRef = ref(db, 'chats/' + roomId);
-        const snapshot = await get(chatRef);
-        if(snapshot.exists()) {
-            snapshot.forEach(child => {
-                displayMessage(child.key, child.val(), false);
-            });
-        }
+        // Listeners
+        loadChatListeners(roomId);
+        listenForStatus(targetId);
+        
+        // Highlight Active
+        document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
+        if(elementRef) elementRef.classList.add('active');
+    }
 
-        // 2. Listen New Messages
+    function loadChatListeners(roomId) {
+        const chatRef = ref(db, 'chats/' + roomId);
+
+        // 1. Load History
+        get(chatRef).then(snapshot => {
+            if(snapshot.exists()) {
+                snapshot.forEach(child => {
+                    displayMessage(child.key, child.val(), false);
+                });
+            }
+        });
+
+        // 2. Listen New
         onChildAdded(chatRef, (snapshot) => {
             if (!document.getElementById('msg-' + snapshot.key)) {
                 displayMessage(snapshot.key, snapshot.val(), true);
@@ -575,26 +751,44 @@
             }
         });
 
-        // 3. Listen Deleted Messages
+        // 3. Listen Deleted
         onChildRemoved(chatRef, (snapshot) => {
             const msgEl = document.getElementById('msg-' + snapshot.key);
             if (msgEl) msgEl.remove();
         });
 
-        // 4. Listen Read Status Update (Centang Biru)
+        // 4. Listen Edited/Read
         onChildChanged(chatRef, (snapshot) => {
              const msgEl = document.getElementById('msg-' + snapshot.key);
              const data = snapshot.val();
-             if (msgEl && data.read) {
-                 const ticks = msgEl.querySelector('.ticks');
-                 if(ticks) ticks.className = 'fas fa-check-double ticks blue';
+             if (msgEl) {
+                 // Update Read Status (UI only)
+                 if (data.read) {
+                     const ticks = msgEl.querySelector('.ticks');
+                     if(ticks) ticks.className = 'fas fa-check-double ticks blue';
+                 }
+                 // Update Text if edited
+                 if (data.edited) {
+                     const textEl = msgEl.querySelector('.text-content');
+                     if(textEl) textEl.innerText = data.text;
+                     // Add edited label if not exists
+                     let meta = msgEl.querySelector('.msg-meta');
+                     let editedLabel = document.createElement('span');
+                     editedLabel.className = 'msg-edited';
+                     editedLabel.innerText = 'edited';
+                     // simple logic to prevent double label
+                     if(!meta.querySelector('.msg-edited')) meta.insertBefore(editedLabel, meta.firstChild);
+                 }
              }
         });
+    }
 
-        // 5. Listen Status Online/Offline
-        onValue(ref(db, 'users/' + targetId + '/status'), (snapshot) => {
+    function listenForStatus(targetId) {
+        const statusRef = ref(db, 'users/' + targetId + '/status');
+        onValue(statusRef, (snapshot) => {
             const status = snapshot.val();
             const statusEl = document.getElementById('chat-status');
+            
             if(status === 'online') {
                 isTargetOnline = true;
                 statusEl.innerText = 'Online';
@@ -602,31 +796,36 @@
                 statusEl.style.color = '#a5d6a7';
             } else {
                 isTargetOnline = false;
-                statusEl.innerText = 'Offline';
+                // Format Last Seen
+                if (status && typeof status === 'number') {
+                    const date = new Date(status);
+                    const timeStr = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                    const dateStr = date.toLocaleDateString('id-ID');
+                    const today = new Date().toLocaleDateString('id-ID');
+                    
+                    if(dateStr === today) {
+                        statusEl.innerText = `Terakhir dilihat hari ini pukul ${timeStr}`;
+                    } else {
+                        statusEl.innerText = `Terakhir dilihat ${dateStr} ${timeStr}`;
+                    }
+                } else {
+                    statusEl.innerText = 'Offline';
+                }
                 statusEl.className = '';
                 statusEl.style.color = '#ffcc80';
             }
         });
 
-        // 6. Listen Typing Status
+        // Typing
         onValue(ref(db, 'users/' + targetId + '/typingTo'), (snapshot) => {
-            const typingTarget = snapshot.val();
-            const statusEl = document.getElementById('chat-status');
-            if(typingTarget === myId) {
+            if(snapshot.val() === myId) {
                 statusEl.innerText = 'Mengetik...';
                 statusEl.className = 'typing-indicator';
-            } else {
-                // Kembalikan ke status sebelumnya
-                // Trigger manual check atau abaikan, karena onValue status akan otomatis update
             }
         });
-        
-        // Highlight Active
-        document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
-        if(elementRef) elementRef.classList.add('active');
     }
 
-    // Tampilkan Pesan dengan Logika Centang
+    // --- DISPLAY MESSAGE ---
     function displayMessage(key, data, playSound) {
         if (!currentChatTarget) return;
 
@@ -639,84 +838,157 @@
 
         div.className = `msg ${isMe ? 'sent' : 'received'}`;
         
+        // Logika Tick
         let tickHtml = '';
         if (isMe) {
             if (data.read) {
-                // 2 Biru (Dibaca)
                 tickHtml = '<i class="fas fa-check-double ticks blue"></i>';
             } else {
-                // Logika:
-                // 1 Abu = Terkirim, Lawan Offline
-                // 2 Abu = Terkirim, Lawan Online (Tapi belum dibaca)
-                if (isTargetOnline) {
-                    tickHtml = '<i class="fas fa-check-double ticks grey"></i>';
-                } else {
-                    tickHtml = '<i class="fas fa-check ticks grey"></i>';
-                }
+                if (isTargetOnline) tickHtml = '<i class="fas fa-check-double ticks grey"></i>';
+                else tickHtml = '<i class="fas fa-check ticks grey"></i>';
             }
         }
 
+        // Logika Reply
+        let replyHtml = '';
+        if (data.replyTo) {
+            replyHtml = `
+                <div class="quoted-msg">
+                    <b>${data.replyTo.name}</b><br>
+                    <span style="color:#666;">${data.replyTo.text.substring(0, 30)}...</span>
+                </div>`;
+        }
+
+        // Edited Label
+        let editedLabelHtml = data.edited ? '<span class="msg-edited">edited</span>' : '';
+
         div.innerHTML = `
-            <div>${data.text}</div>
+            ${replyHtml}
+            <div class="text-content">${data.text}</div>
             <div class="msg-meta">
+                ${editedLabelHtml}
                 <span class="msg-time">${time}</span>
                 ${tickHtml}
             </div>
         `;
 
-        if (isMe) {
-            div.oncontextmenu = (e) => {
-                e.preventDefault();
-                if (confirm("Hapus pesan ini untuk semua?")) {
-                    hapusPesan(key);
-                }
-            };
-        }
+        // Context Menu Trigger (Right Click / Long Press)
+        div.oncontextmenu = (e) => showContextMenu(e, key, data);
+
+        // Long Press for Mobile
+        div.ontouchstart = (e) => {
+            longPressTimer = setTimeout(() => showContextMenu(e, key, data), 500);
+        };
+        div.ontouchend = () => clearTimeout(longPressTimer);
+        div.ontouchmove = () => clearTimeout(longPressTimer);
 
         box.appendChild(div);
         box.scrollTop = box.scrollHeight;
 
-        if (!isMe && playSound) {
-            notifSound.play();
-        }
+        if (!isMe && playSound) notifSound.play();
     }
 
-    // Logika Read Receipt
-    async function markAsRead(msgKey, msgData) {
-        // Jika pesan bukan dari saya DAN belum dibaca
-        if (msgData.from !== myId && !msgData.read) {
+    // --- CONTEXT MENU ACTIONS ---
+    let selectedMsgKey = null;
+    let selectedMsgData = null;
+
+    function showContextMenu(e, key, data) {
+        e.preventDefault();
+        selectedMsgKey = key;
+        selectedMsgData = data;
+        
+        const editOpt = document.getElementById('ctx-edit');
+        // Hanya tampilan edit untuk pesan sendiri
+        editOpt.style.display = (data.from === myId) ? 'block' : 'none';
+
+        // Position
+        contextMenu.style.display = 'block';
+        contextMenu.style.left = `${e.pageX}px`;
+        contextMenu.style.top = `${e.pageY}px`;
+        
+        // Close listener
+        document.onclick = () => {
+            contextMenu.style.display = 'none';
+            document.onclick = null;
+        };
+    }
+
+    window.replyMessage = () => {
+        if(!selectedMsgData) return;
+        replyingTo = { key: selectedMsgKey, ...selectedMsgData };
+        document.getElementById('reply-container').classList.add('active');
+        document.getElementById('reply-text').innerText = replyingTo.name;
+        document.getElementById('reply-preview').innerText = replyingTo.text;
+        document.getElementById('msg-input').focus();
+    };
+
+    window.cancelReply = () => {
+        replyingTo = null;
+        document.getElementById('reply-container').classList.remove('active');
+    };
+
+    window.editMessage = () => {
+        if(!selectedMsgData || selectedMsgData.from !== myId) return;
+        editingKey = selectedMsgKey;
+        const input = document.getElementById('msg-input');
+        input.value = selectedMsgData.text;
+        input.focus();
+        // Visual feedback bisa ditambahkan
+    };
+
+    window.deleteMessage = async () => {
+        if(!selectedMsgKey) return;
+        if(confirm("Hapus pesan ini?")) {
             const roomId = getRoomId(myId, currentChatTarget);
-            await update(ref(db, 'chats/' + roomId + '/' + msgKey), { read: true });
+            await remove(ref(db, `chats/${roomId}/${selectedMsgKey}`));
         }
-    }
+    };
 
-    // --- KIRIM PESAN ---
-    window.kirimPesan = async () => {
+    // --- SEND / UPDATE MESSAGE ---
+    window.sendMessage = async () => {
         const input = document.getElementById('msg-input');
         const text = input.value.trim();
         if (!text || !currentChatTarget) return;
 
         const roomId = getRoomId(myId, currentChatTarget);
-        
-        const msgData = {
-            from: myId,
-            name: myName,
-            text: text,
-            timestamp: Date.now(),
-            read: false
-        };
 
-        await push(ref(db, 'chats/' + roomId), msgData);
-        input.value = '';
-        
-        // Auto-Sync Kontak: Simpan ID saya di kontak lawan
-        const targetContactRef = ref(db, 'users/' + currentChatTarget + '/contacts/' + myId);
-        const snapshot = await get(targetContactRef);
-        if (!snapshot.exists()) {
-             await set(targetContactRef, myName);
+        if (editingKey) {
+            // MODE EDIT
+            await update(ref(db, 'chats/' + roomId + '/' + editingKey), {
+                text: text,
+                edited: true
+            });
+            editingKey = null; // Reset
+        } else {
+            // MODE KIRIM BARU
+            const msgData = {
+                from: myId,
+                name: myName,
+                text: text,
+                timestamp: Date.now(),
+                read: false
+            };
+
+            // Tambahkan Reply jika ada
+            if (replyingTo) {
+                msgData.replyTo = {
+                    name: replyingTo.name,
+                    text: replyingTo.text
+                };
+            }
+
+            await push(ref(db, 'chats/' + roomId), msgData);
+            
+            // Auto-Sync Kontak
+            const targetContactRef = ref(db, 'users/' + currentChatTarget + '/contacts/' + myId);
+            const snapshot = await get(targetContactRef);
+            if (!snapshot.exists()) await set(targetContactRef, myName);
+
+            checkAndClean(roomId);
         }
 
-        checkAndClean(roomId);
+        input.value = '';
+        cancelReply();
         
         // Stop typing status
         set(ref(db, 'users/' + myId + '/typingTo'), null);
@@ -734,9 +1006,11 @@
         }, 1000);
     };
 
-    async function hapusPesan(msgKey) {
-        const roomId = getRoomId(myId, currentChatTarget);
-        await remove(ref(db, `chats/${roomId}/${msgKey}`));
+    async function markAsRead(msgKey, msgData) {
+        if (msgData.from !== myId && !msgData.read) {
+            const roomId = getRoomId(myId, currentChatTarget);
+            await update(ref(db, 'chats/' + roomId + '/' + msgKey), { read: true });
+        }
     }
 
     async function checkAndClean(roomId) {
