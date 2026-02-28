@@ -13,7 +13,6 @@
             --accent: #34B7F1;
             --text-dark: #303030;
             --text-light: #777;
-            --bg-color: #E5DDD5;
             --white: #ffffff;
         }
 
@@ -83,7 +82,6 @@
             border-radius: 20px;
             overflow: hidden;
             border: 1px solid #ddd;
-            margin-bottom: 10px;
         }
         
         .input-group input {
@@ -143,7 +141,7 @@
         }
 
         .chat-header-info h3 { font-size: 1rem; }
-        .chat-header-info span { font-size: 0.8rem; opacity: 0.8; display: block; height: 15px; } /* Height for typing text */
+        .chat-header-info span { font-size: 0.8rem; opacity: 0.8; display: block; height: 18px; }
         .typing-indicator { color: #a5d6a7; font-style: italic; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 
@@ -352,7 +350,7 @@
 
     <div class="sidebar-tools">
         <div class="input-group">
-            <input type="text" placeholder="Cari chat..." disabled title="Fitur cari dalam pengembangan">
+            <input type="text" placeholder="Cari chat..." disabled>
             <button disabled><i class="fas fa-search"></i></button>
         </div>
     </div>
@@ -390,6 +388,7 @@
 <audio id="notif-sound" src="data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYZHyRvuAAAAAAD/+9DEAAAIAANIAAAAQgAAaQAAAASX5f//5c0y5cuXLly5cuXLly5cuXLly5cuXLly5cv/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/ly5cuXLly5cuXLly5cuXLly5cuX/y5cuXLly5f+XLly5cuXLly5cuXLly5cuXLly5f/Lly5cuXLl/5cuXLly5cuXLly5cuXLly5cuXLl/8uXLly5cuX/////////////////////////////////////AAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/////////////////////////////////////AAAAAAA="></audio>
 
 <script type="module">
+    // 1. IMPORT DI ATAS (Top Level) - Memperbaiki error sebelumnya
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { 
         getDatabase, 
@@ -397,14 +396,14 @@
         push, 
         onChildAdded, 
         onChildRemoved,
-        onValue, // Untuk listener realtime status
+        onChildChanged, // Ditambahkan ke import utama
+        onValue, 
         get, 
         set, 
         update,
         remove, 
         query, 
-        onDisconnect,
-        serverTimestamp
+        onDisconnect
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -423,7 +422,7 @@
     let myId = localStorage.getItem('chatme_id');
     let myName = localStorage.getItem('chatme_name');
     let currentChatTarget = null;
-    let isTyping = false;
+    let isTargetOnline = false; // State untuk status lawan
     let typingTimeout;
 
     const setupModal = document.getElementById('setup-modal');
@@ -435,7 +434,7 @@
             setupModal.style.display = 'flex';
         } else {
             setupModal.style.display = 'none';
-            registerPresence(); // Setup online status
+            registerPresence();
             loadUserProfile();
             loadContacts();
         }
@@ -457,23 +456,17 @@
         localStorage.setItem('chatme_id', myId);
         localStorage.setItem('chatme_name', myName);
 
-        // Simpan nama ke DB agar bisa dicari orang lain
         await set(ref(db, 'users/' + myId + '/name'), myName);
         
         setupModal.style.display = 'none';
         initApp();
     };
 
-    // --- PRESENCE SYSTEM (Online/Offline) ---
+    // --- PRESENCE SYSTEM ---
     function registerPresence() {
         const statusRef = ref(db, 'users/' + myId + '/status');
-        // Set online saat buka aplikasi
         set(statusRef, 'online');
-        
-        // Set offline saat tutup aplikasi/disconnect
         onDisconnect(statusRef).set('offline');
-
-        // Sync nama jika berubah
         set(ref(db, 'users/' + myId + '/name'), myName);
     }
 
@@ -484,8 +477,6 @@
     }
 
     // --- CONTACT MANAGEMENT ---
-    
-    // Load kontak dari Firebase (Realtime)
     function loadContacts() {
         const contactsRef = ref(db, 'users/' + myId + '/contacts');
         onValue(contactsRef, (snapshot) => {
@@ -499,11 +490,12 @@
 
             snapshot.forEach(child => {
                 const id = child.key;
-                const name = child.val(); // Nama yang tersimpan
+                const name = child.val();
                 
                 const div = document.createElement('div');
                 div.className = 'contact-item';
-                div.onclick = () => openChat(id, name);
+                // Memperbaiki error 'event' dengan mengirim 'div' sebagai context
+                div.onclick = function() { openChat(id, name, this); };
                 div.innerHTML = `
                     <div class="avatar">${name.charAt(0)}</div>
                     <div class="contact-info">
@@ -543,7 +535,6 @@
     window.saveContact = async () => {
         const id = document.getElementById('res-id').innerText;
         const name = document.getElementById('res-name').innerText;
-        // Simpan kontak ke Firebase di node user kita
         await set(ref(db, 'users/' + myId + '/contacts/' + id), name);
         alert("Kontak berhasil ditambahkan!");
         closeAddModal();
@@ -555,7 +546,7 @@
         return [uid1, uid2].sort().join('_');
     }
 
-    async function openChat(targetId, targetName) {
+    async function openChat(targetId, targetName, elementRef) {
         currentChatTarget = targetId;
         
         document.getElementById('chat-header').style.display = 'flex';
@@ -580,7 +571,6 @@
         onChildAdded(chatRef, (snapshot) => {
             if (!document.getElementById('msg-' + snapshot.key)) {
                 displayMessage(snapshot.key, snapshot.val(), true);
-                // Set pesan sebagai sudah dibaca jika chat terbuka
                 markAsRead(snapshot.key, snapshot.val());
             }
         });
@@ -591,43 +581,52 @@
             if (msgEl) msgEl.remove();
         });
 
-        // 4. Listen Status Online/Offline Lawan
+        // 4. Listen Read Status Update (Centang Biru)
+        onChildChanged(chatRef, (snapshot) => {
+             const msgEl = document.getElementById('msg-' + snapshot.key);
+             const data = snapshot.val();
+             if (msgEl && data.read) {
+                 const ticks = msgEl.querySelector('.ticks');
+                 if(ticks) ticks.className = 'fas fa-check-double ticks blue';
+             }
+        });
+
+        // 5. Listen Status Online/Offline
         onValue(ref(db, 'users/' + targetId + '/status'), (snapshot) => {
             const status = snapshot.val();
             const statusEl = document.getElementById('chat-status');
             if(status === 'online') {
+                isTargetOnline = true;
                 statusEl.innerText = 'Online';
+                statusEl.className = '';
                 statusEl.style.color = '#a5d6a7';
             } else {
+                isTargetOnline = false;
                 statusEl.innerText = 'Offline';
+                statusEl.className = '';
                 statusEl.style.color = '#ffcc80';
             }
         });
 
-        // 5. Listen Typing Status
+        // 6. Listen Typing Status
         onValue(ref(db, 'users/' + targetId + '/typingTo'), (snapshot) => {
             const typingTarget = snapshot.val();
             const statusEl = document.getElementById('chat-status');
-            // Hanya tampilin jika statusnya bukan 'Online' (biar tidak flicker)
-            // Atapi kita timpa saja
             if(typingTarget === myId) {
                 statusEl.innerText = 'Mengetik...';
                 statusEl.className = 'typing-indicator';
             } else {
-                // Kembalikan ke status semula (perlu refresh status online)
-                // Sederhananya: biar logika status online di atas handle ini dengan detik timeout kecil
-                setTimeout(() => {
-                     // refresh status dipicu oleh listener status online
-                }, 1000);
+                // Kembalikan ke status sebelumnya
+                // Trigger manual check atau abaikan, karena onValue status akan otomatis update
             }
         });
         
-        // Highlight active contact
+        // Highlight Active
         document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
-        event.currentTarget.classList.add('active');
+        if(elementRef) elementRef.classList.add('active');
     }
 
-    // Tampilkan Pesan
+    // Tampilkan Pesan dengan Logika Centang
     function displayMessage(key, data, playSound) {
         if (!currentChatTarget) return;
 
@@ -640,26 +639,20 @@
 
         div.className = `msg ${isMe ? 'sent' : 'received'}`;
         
-        // Logika Tick
         let tickHtml = '';
         if (isMe) {
             if (data.read) {
                 // 2 Biru (Dibaca)
                 tickHtml = '<i class="fas fa-check-double ticks blue"></i>';
             } else {
-                // Jika belum dibaca, cek status lawan (Logika sederhana: 
-                // Kita tidak bisa cek status lawan di momen ini tanpa listener tambahan, 
-                // jadi kita asumsikan:
-                // 1 Centang Abu = Terkirim ke server. 
-                // 2 Centang Abu = Terkirim ke device (Jika lawan online).
-                // Untuk simplicity demo: 1 centang abu default, 2 biru kalo udah read.
-                // Kita buat logic: Jika lawan online -> 2 Abu. Jika offline -> 1 Abu.
-                // Kita butuh cek status lawan di sini.
-                
-                // *Optimasi: Kita skip cek realtime per pesan untuk beban DB, 
-                // Kita pakai logic: Default 1 Abu. Nanti update listener.
-                
-                tickHtml = '<i class="fas fa-check ticks grey"></i>'; // Default 1 Abu
+                // Logika:
+                // 1 Abu = Terkirim, Lawan Offline
+                // 2 Abu = Terkirim, Lawan Online (Tapi belum dibaca)
+                if (isTargetOnline) {
+                    tickHtml = '<i class="fas fa-check-double ticks grey"></i>';
+                } else {
+                    tickHtml = '<i class="fas fa-check ticks grey"></i>';
+                }
             }
         }
 
@@ -688,37 +681,13 @@
         }
     }
 
-    // Logika Read Receipt & Ticks Update
+    // Logika Read Receipt
     async function markAsRead(msgKey, msgData) {
+        // Jika pesan bukan dari saya DAN belum dibaca
         if (msgData.from !== myId && !msgData.read) {
             const roomId = getRoomId(myId, currentChatTarget);
-            // Update status read di DB
             await update(ref(db, 'chats/' + roomId + '/' + msgKey), { read: true });
         }
-    }
-
-    // Update UI Centang saat ada perubahan data pesan (Read)
-    function listenForReadStatus(roomId) {
-        // Listener ini bisa ditambahkan spesifik per pesan, tapi untuk hemat resource
-        // kita bisa bind onChildChanged
-        import { onChildChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-        
-        onChildChanged(ref(db, 'chats/' + roomId), (snapshot) => {
-             const msgEl = document.getElementById('msg-' + snapshot.key);
-             if (msgEl && snapshot.val().read) {
-                 // Ubah centang jadi 2 biru
-                 const ticks = msgEl.querySelector('.ticks');
-                 if(ticks) {
-                     ticks.className = 'fas fa-check-double ticks blue';
-                 }
-             }
-        });
-    }
-    // Panggil di openChat
-    const originalOpenChat = openChat;
-    openChat = function(id, name) {
-        originalOpenChat(id, name);
-        listenForReadStatus(getRoomId(myId, id));
     }
 
     // --- KIRIM PESAN ---
@@ -737,38 +706,32 @@
             read: false
         };
 
-        // 1. Push Message
         await push(ref(db, 'chats/' + roomId), msgData);
         input.value = '';
         
-        // 2. Auto-Sync Kontak: 
-        // Jika saya chat dia, saya otomatis masuk ke kontak dia dengan nama saya.
-        // Ini memastikan dia bisa reply meski belum save kontak saya.
+        // Auto-Sync Kontak: Simpan ID saya di kontak lawan
         const targetContactRef = ref(db, 'users/' + currentChatTarget + '/contacts/' + myId);
         const snapshot = await get(targetContactRef);
         if (!snapshot.exists()) {
-             await set(targetContactRef, myName); // Simpan ID saya di kontak dia
+             await set(targetContactRef, myName);
         }
 
-        // 3. Clean DB
         checkAndClean(roomId);
         
-        // 4. Stop typing status
+        // Stop typing status
         set(ref(db, 'users/' + myId + '/typingTo'), null);
     };
 
     // --- TYPING INDICATOR ---
     window.handleTyping = (e) => {
-        if (e.key === 'Enter') return; // Abaikan enter
+        if (e.key === 'Enter') return;
         
-        // Set status mengetik ke DB
         set(ref(db, 'users/' + myId + '/typingTo'), currentChatTarget);
         
-        // Reset timer
         clearTimeout(typingTimeout);
         typingTimeout = setTimeout(() => {
             set(ref(db, 'users/' + myId + '/typingTo'), null);
-        }, 1500); // Setelah 1.5 detik diam, anggap selesai mengetik
+        }, 1000);
     };
 
     async function hapusPesan(msgKey) {
