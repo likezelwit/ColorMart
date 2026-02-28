@@ -1,41 +1,112 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Chat Cepat</title>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>ColorMart Chat</title>
     <style>
-      body { font-family: sans-serif; margin: 20px; }
-      #messages { list-style-type: none; padding: 0; border: 1px solid #ccc; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
-      #messages li { padding: 8px; border-bottom: 1px solid #eee; }
-      input { width: 80%; padding: 10px; }
-      button { padding: 10px 20px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; height: 100vh; background: #f0f2f5; }
+        
+        /* Sidebar Kontak */
+        #sidebar { width: 300px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+        #sidebar h2 { padding: 20px; background: #075e54; color: white; font-size: 1.2rem; }
+        #contact-list { list-style: none; overflow-y: auto; flex: 1; }
+        .contact-item { padding: 15px 20px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.3s; }
+        .contact-item:hover { background: #f5f5f5; }
+        .contact-item.active { background: #e9edef; font-weight: bold; }
+
+        /* Area Chat */
+        #main-chat { flex: 1; display: flex; flex-direction: column; }
+        #chat-header { padding: 15px 25px; background: #ededed; border-bottom: 1px solid #ddd; font-weight: bold; }
+        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        
+        /* Bubble Chat */
+        .msg { max-width: 70%; padding: 8px 12px; border-radius: 8px; font-size: 0.95rem; line-height: 1.4; }
+        .msg.sent { align-self: flex-end; background: #dcf8c6; border: 1px solid #95cc6a; }
+        .msg.received { align-self: flex-start; background: white; border: 1px solid #ddd; }
+
+        /* Input Area */
+        #input-area { padding: 15px; background: #f0f2f5; display: flex; gap: 10px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        button { padding: 10px 20px; background: #075e54; color: white; border: none; border-radius: 25px; cursor: pointer; }
     </style>
-  </head>
-  <body>
-    <ul id="messages"></ul>
-    <form id="form" action="">
-      <input id="input" autocomplete="off" placeholder="Ketik pesan..." /><button>Kirim</button>
+</head>
+<body>
+
+<div id="sidebar">
+    <h2>Kontak Online</h2>
+    <div style="padding: 10px; font-size: 0.8rem; color: #666;">ID Kamu: <span id="my-id">...</span></div>
+    <ul id="contact-list">
+        </ul>
+</div>
+
+<div id="main-chat">
+    <div id="chat-header">Pilih kontak untuk mulai chat</div>
+    <div id="messages"></div>
+    <form id="chat-form" id="input-area" style="display:none; padding: 15px; display: flex; gap: 10px;">
+        <input id="msg-input" placeholder="Ketik pesan..." autocomplete="off" />
+        <button type="submit">Kirim</button>
     </form>
+</div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-      var socket = io();
-      var form = document.getElementById('form');
-      var input = document.getElementById('input');
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    let currentTargetId = null;
 
-      form.addEventListener('submit', function(e) {
+    // Tampilkan ID sendiri
+    socket.on('my-id', (id) => { document.getElementById('my-id').innerText = id; });
+
+    // Update Daftar Kontak
+    socket.on('update-users', (users) => {
+        const list = document.getElementById('contact-list');
+        list.innerHTML = '';
+        users.forEach(id => {
+            if (id !== socket.id) {
+                const li = document.createElement('li');
+                li.className = `contact-item ${id === currentTargetId ? 'active' : ''}`;
+                li.innerText = `User ${id.substring(0, 5)}...`;
+                li.onclick = () => selectContact(id);
+                list.appendChild(li);
+            }
+        });
+    });
+
+    function selectContact(id) {
+        currentTargetId = id;
+        document.getElementById('chat-header').innerText = `Chat dengan User ${id.substring(0, 5)}`;
+        document.getElementById('chat-form').style.display = 'flex';
+        document.getElementById('messages').innerHTML = ''; // Reset layar chat
+    }
+
+    // Kirim Pesan
+    document.getElementById('chat-form').onsubmit = (e) => {
         e.preventDefault();
-        if (input.value) {
-          socket.emit('chat message', input.value);
-          input.value = '';
+        const msg = document.getElementById('msg-input').value;
+        if (msg && currentTargetId) {
+            socket.emit('private-message', { targetId: currentTargetId, msg });
+            addMessage(msg, 'sent');
+            document.getElementById('msg-input').value = '';
         }
-      });
+    };
 
-      socket.on('chat message', function(msg) {
-        var item = document.createElement('li');
-        item.textContent = msg;
-        document.getElementById('messages').appendChild(item);
-        window.scrollTo(0, document.body.scrollHeight);
-      });
-    </script>
-  </body>
+    // Terima Pesan
+    socket.on('chat message', (data) => {
+        if (data.from === currentTargetId) {
+            addMessage(data.message, 'received');
+        } else {
+            alert(`Pesan baru dari User ${data.from.substring(0,5)}! Klik kontaknya.`);
+        }
+    });
+
+    function addMessage(text, type) {
+        const div = document.createElement('div');
+        div.className = `msg ${type}`;
+        div.innerText = text;
+        const box = document.getElementById('messages');
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+</script>
+</body>
 </html>
